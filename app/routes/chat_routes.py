@@ -25,20 +25,19 @@ def get_foundry_client() -> AIProjectClient:
     if _client is None:
         # This SDK version (azure-ai-projects 1.0.0b5) needs ALL of these
         # together: endpoint AND subscription/resource-group/project-name.
-        # credential_scopes is forced explicitly because, even with every
-        # relevant RBAC role assigned (Foundry User, Cognitive Services
-        # OpenAI User, Cognitive Services User, Azure AI Developer), the
-        # Managed Identity token the SDK requested by default had the wrong
-        # audience - the server kept rejecting it with "audience is
-        # incorrect (https://ai.azure.com)". Requesting the token for that
-        # exact audience ourselves works around it.
+        # NOTE: this SDK's own _patch.py hard-blocks passing
+        # credential_scopes ("No support for overriding the credential
+        # scopes") - it already requests the correct audience internally,
+        # so the earlier "audience is incorrect" 401s were a real RBAC
+        # propagation issue on Azure's side, not something to work around
+        # here. Plain DefaultAzureCredential is correct once the Managed
+        # Identity has the "Foundry User" role on the Foundry resource.
         _client = AIProjectClient(
             endpoint=settings.FOUNDRY_PROJECT_ENDPOINT,
             credential=DefaultAzureCredential(),
             subscription_id=settings.AZURE_SUBSCRIPTION_ID,
             resource_group_name=settings.AZURE_RESOURCE_GROUP,
             project_name=settings.FOUNDRY_PROJECT_NAME,
-            credential_scopes=["https://ai.azure.com/.default"],
         )
     return _client
 
