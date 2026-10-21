@@ -20,41 +20,21 @@ router = APIRouter()
 _client: AIProjectClient | None = None
 
 
-class _ForceAudienceCredential:
-    """
-    Wraps DefaultAzureCredential and ignores whatever scope the SDK asks
-    for, always requesting a token for https://ai.azure.com/.default
-    instead. The AIProjectClient constructor itself refuses a
-    credential_scopes override ("No support for overriding the credential
-    scopes" - raised from its own _patch.py), but it has no way to stop us
-    wrapping the credential object it calls .get_token() on - so we force
-    the audience here. This exists because, even with every relevant RBAC
-    role granted (Foundry User, Cognitive Services User, Cognitive
-    Services OpenAI User), calls kept failing with "Unauthorized ...
-    audience is incorrect (https://ai.azure.com)" - meaning the token this
-    SDK version requests by default has some other audience baked in.
-    """
-
-    def __init__(self, inner):
-        self._inner = inner
-
-    def get_token(self, *scopes, **kwargs):
-        return self._inner.get_token("https://ai.azure.com/.default", **kwargs)
-
-
 def get_foundry_client() -> AIProjectClient:
     global _client
     if _client is None:
-        # This SDK version (azure-ai-projects 1.0.0b5) needs ALL of these
-        # together: endpoint AND subscription/resource-group/project-name.
-        # The constructor itself refuses credential_scopes, so the fix is
-        # the _ForceAudienceCredential wrapper above, not a kwarg here.
+        # Current (GA-era) azure-ai-projects client only needs endpoint +
+        # credential. Earlier in this project we were pinned to the very
+        # old 1.0.0b5 beta (Jan 2025), which (a) needed subscription_id /
+        # resource_group_name / project_name as well, and (b) spoke an API
+        # version the Foundry backend has since moved past, failing with
+        # "(BadRequest) API version not supported". Upgrading the pinned
+        # version (see requirements.txt) and dropping those extra kwargs
+        # fixes both at once. Plain DefaultAzureCredential is correct here;
+        # this client resolves its own token audience internally.
         _client = AIProjectClient(
             endpoint=settings.FOUNDRY_PROJECT_ENDPOINT,
-            credential=_ForceAudienceCredential(DefaultAzureCredential()),
-            subscription_id=settings.AZURE_SUBSCRIPTION_ID,
-            resource_group_name=settings.AZURE_RESOURCE_GROUP,
-            project_name=settings.FOUNDRY_PROJECT_NAME,
+            credential=DefaultAzureCredential(),
         )
     return _client
 
@@ -67,25 +47,29 @@ def chat(
 ):
     client = get_foundry_client()
 
-    # One thread per user, reused across the session, so follow-up questions
-    # keep context ("what about its budget?" after "tell me about Loomwell").
-    # This SDK version (1.0.0b5) exposes these as flat methods on
-    # client.agents, not nested under .threads/.messages/.runs.
-    thread = client.agents.create_thread()
+    # One thread per message for now (simplest thing that works); the
+    # current SDK nests these under .agents.threads / .agents.messages /
+    # .agents.runs rather than exposing flat create_thread()-style methods.
+    thread = client.agents.threads.create()
 
-    client.agents.create_message(thread_id=thread.id, role="user", content=message)
+    client.agents.messages.create(thread_id=thread.id, role="user", content=message)
 
-    run = client.agents.create_and_process_run(
-        thread_id=thread.id, assistant_id=settings.FOUNDRY_CEO_AGENT_ID
+    run = client.agents.runs.create_and_process(
+        thread_id=thread.id, agent_id=settings.FOUNDRY_CEO_AGENT_ID
     )
 
     reply_text = "Sorry, I couldn't get an answer just now."
     if run.status == "completed":
-        messages = client.agents.list_messages(thread_id=thread.id)
-        for m in messages.data:
-            if m.role == "assistant" and m.text_messages:
-                reply_text = m.text_messages[-1].text.value
+        messages = client.agents.messages.list(thread_id=thread.id)
+        for m in messages:
+            if m.role == "assistant":
+                for content in m.content:
+                    if content.type == "text":
+                        reply_text = content.text.value
+                        break
                 break
+    else:
+        reply_text = f"Sorry, the assistant run didn't complete (status: {run.status})."
 
     db.add(ChatMessage(user_id=user.id, role="user", content=message))
     db.add(ChatMessage(user_id=user.id, role="assistant", content=reply_text))
