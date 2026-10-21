@@ -45,18 +45,20 @@ def chat(
 
     # One thread per user, reused across the session, so follow-up questions
     # keep context ("what about its budget?" after "tell me about Loomwell").
-    thread = client.agents.threads.create()
+    # This SDK version (1.0.0b5) exposes these as flat methods on
+    # client.agents, not nested under .threads/.messages/.runs.
+    thread = client.agents.create_thread()
 
-    client.agents.messages.create(thread_id=thread.id, role="user", content=message)
+    client.agents.create_message(thread_id=thread.id, role="user", content=message)
 
-    run = client.agents.runs.create_and_process(
-        thread_id=thread.id, agent_id=settings.FOUNDRY_CEO_AGENT_ID
+    run = client.agents.create_and_process_run(
+        thread_id=thread.id, assistant_id=settings.FOUNDRY_CEO_AGENT_ID
     )
 
     reply_text = "Sorry, I couldn't get an answer just now."
     if run.status == "completed":
-        messages = client.agents.messages.list(thread_id=thread.id)
-        for m in messages:
+        messages = client.agents.list_messages(thread_id=thread.id)
+        for m in messages.data:
             if m.role == "assistant" and m.text_messages:
                 reply_text = m.text_messages[-1].text.value
                 break
