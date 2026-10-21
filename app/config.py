@@ -15,8 +15,12 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./loomwell_dev.db"  # local fallback only
 
     # --- Azure AI Foundry (CEO chatbot / RAG) ---
-    FOUNDRY_PROJECT_ENDPOINT: str = ""   # e.g. https://<your-foundry-resource>.services.ai.azure.com/api/projects/<project-name>
-    FOUNDRY_CEO_AGENT_ID: str = ""       # set after creating the CEO agent in the portal
+    # The azure-ai-projects 1.0.0b5 SDK's AIProjectClient does NOT take an
+    # endpoint URL - it builds the connection from these three IDs instead.
+    AZURE_SUBSCRIPTION_ID: str = ""       # your Azure subscription GUID
+    AZURE_RESOURCE_GROUP: str = ""        # resource group that holds the Foundry project (e.g. proj-uaenorth's RG)
+    FOUNDRY_PROJECT_NAME: str = ""        # the Foundry project name (e.g. proj-uaenorth)
+    FOUNDRY_CEO_AGENT_ID: str = ""        # set after creating the CEO agent in the portal
 
     # --- Azure AI Vision (Lens feature) ---
     VISION_ENDPOINT: str = ""            # e.g. https://<your-vision-resource>.cognitiveservices.azure.com

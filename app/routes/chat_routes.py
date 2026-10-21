@@ -23,9 +23,13 @@ _client: AIProjectClient | None = None
 def get_foundry_client() -> AIProjectClient:
     global _client
     if _client is None:
+        # This SDK version (azure-ai-projects 1.0.0b5) builds the client from
+        # subscription/resource-group/project-name, not an endpoint URL.
         _client = AIProjectClient(
-            endpoint=settings.FOUNDRY_PROJECT_ENDPOINT,
             credential=DefaultAzureCredential(),
+            subscription_id=settings.AZURE_SUBSCRIPTION_ID,
+            resource_group_name=settings.AZURE_RESOURCE_GROUP,
+            project_name=settings.FOUNDRY_PROJECT_NAME,
         )
     return _client
 

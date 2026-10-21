@@ -71,12 +71,14 @@ On `loomwell-app` -> **Configuration** -> **Application settings** -> add each o
 |---|---|
 | `SECRET_KEY` | any long random string |
 | `DATABASE_URL` | the PostgreSQL connection string from step 1b |
-| `FOUNDRY_PROJECT_ENDPOINT` | from step 1d |
+| `AZURE_SUBSCRIPTION_ID` | your subscription's GUID (Portal -> Subscriptions -> copy "Subscription ID") |
+| `AZURE_RESOURCE_GROUP` | the resource group that holds your Foundry project (e.g. the RG for `proj-uaenorth`) |
+| `FOUNDRY_PROJECT_NAME` | your Foundry project's name (e.g. `proj-uaenorth`) |
 | `FOUNDRY_CEO_AGENT_ID` | from step 1d |
 | `VISION_ENDPOINT` | from step 1c |
 | `VISION_KEY` | from step 1c |
 
-Also set the **Startup Command** under **Configuration -> General settings**:
+Also set the **Startup Command** under **Configuration -> Stack settings** (not "General settings"):
 ```
 bash startup.sh
 ```
