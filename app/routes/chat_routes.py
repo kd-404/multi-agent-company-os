@@ -20,21 +20,46 @@ router = APIRouter()
 _client: AIProjectClient | None = None
 
 
+class _ForceAudienceCredential:
+    """
+    Wraps DefaultAzureCredential and ignores whatever scope the SDK asks
+    for, always requesting a token for https://ai.azure.com/.default
+    instead. The AIProjectClient constructor itself refuses a
+    credential_scopes override ("No support for overriding the credential
+    scopes" - raised from its own _patch.py), but it has no way to stop us
+    wrapping the credential object it calls .get_token() on - so we force
+    the audience here. This exists because, even with every relevant RBAC
+    role granted (Foundry User, Cognitive Services User, Cognitive
+    Services OpenAI User), calls kept failing with "Unauthorized ...
+    audience is incorrect (https://ai.azure.com)" - meaning the token this
+    SDK version requests by default has some other audience baked in.
+    """
+
+    def __init__(self, inner):
+        self._inner = inner
+
+    def get_token(self, *scopes, **kwargs):
+        return self._inner.get_token("https://ai.azure.com/.default", **kwargs)
+
+    async def get_token_info(self, *scopes, **kwargs):  # pragma: no cover
+        # Some azure-core versions probe for an async-capable credential;
+        # AIProjectClient here is sync, so this normally isn't called, but
+        # define it defensively rather than letting an AttributeError hide
+        # the real error.
+        token = self._inner.get_token("https://ai.azure.com/.default", **kwargs)
+        return token
+
+
 def get_foundry_client() -> AIProjectClient:
     global _client
     if _client is None:
         # This SDK version (azure-ai-projects 1.0.0b5) needs ALL of these
         # together: endpoint AND subscription/resource-group/project-name.
-        # NOTE: this SDK's own _patch.py hard-blocks passing
-        # credential_scopes ("No support for overriding the credential
-        # scopes") - it already requests the correct audience internally,
-        # so the earlier "audience is incorrect" 401s were a real RBAC
-        # propagation issue on Azure's side, not something to work around
-        # here. Plain DefaultAzureCredential is correct once the Managed
-        # Identity has the "Foundry User" role on the Foundry resource.
+        # The constructor itself refuses credential_scopes, so the fix is
+        # the _ForceAudienceCredential wrapper above, not a kwarg here.
         _client = AIProjectClient(
             endpoint=settings.FOUNDRY_PROJECT_ENDPOINT,
-            credential=DefaultAzureCredential(),
+            credential=_ForceAudienceCredential(DefaultAzureCredential()),
             subscription_id=settings.AZURE_SUBSCRIPTION_ID,
             resource_group_name=settings.AZURE_RESOURCE_GROUP,
             project_name=settings.FOUNDRY_PROJECT_NAME,
