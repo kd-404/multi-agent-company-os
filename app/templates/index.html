@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Loomwell</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Auth screen -->
+    <section id="auth-screen" class="screen">
+      <div class="card">
+        <h1>Loomwell</h1>
+        <p class="sub">AI-run T-shirt company &mdash; sign in</p>
+
+        <div class="tabs">
+          <button id="tab-login" class="tab active">Log in</button>
+          <button id="tab-register" class="tab">Create account</button>
+        </div>
+
+        <form id="login-form">
+          <input type="email" name="email" placeholder="Email" required />
+          <input type="password" name="password" placeholder="Password" required />
+          <button type="submit">Log in</button>
+          <p class="error" id="login-error"></p>
+        </form>
+
+        <form id="register-form" class="hidden">
+          <input type="email" name="email" placeholder="Email" required />
+          <input type="password" name="password" placeholder="Password" required />
+          <button type="submit">Create account</button>
+          <p class="note">New accounts are always "user" role. An admin can promote accounts later.</p>
+          <p class="error" id="register-error"></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard-screen" class="screen hidden">
+      <header class="topbar">
+        <div><strong>Loomwell</strong> <span id="role-badge" class="badge"></span></div>
+        <div><span id="user-email"></span> &nbsp; <button id="logout-btn">Log out</button></div>
+      </header>
+
+      <main class="grid">
+        <!-- CEO Chatbot -->
+        <div class="panel">
+          <h2>Ask the CEO Assistant</h2>
+          <p class="hint">Ask about ongoing projects, people, or status. Answers are grounded in Loomwell's project docs.</p>
+          <div id="chat-log" class="chat-log"></div>
+          <form id="chat-form">
+            <input type="text" id="chat-input" placeholder="e.g. What's the status of the Design Studio build?" autocomplete="off" />
+            <button type="submit">Send</button>
+          </form>
+        </div>
+
+        <!-- Vision Lens -->
+        <div class="panel">
+          <h2>Vision Lens</h2>
+          <p class="hint">Upload an image to analyze it, or check a design for originality issues.</p>
+          <form id="vision-form">
+            <input type="file" id="vision-file" accept="image/*" required />
+            <div class="radio-row">
+              <label><input type="radio" name="mode" value="general" checked /> General detection</label>
+              <label><input type="radio" name="mode" value="design_check" /> Design originality check</label>
+            </div>
+            <button type="submit">Analyze</button>
+          </form>
+          <div id="vision-result" class="vision-result"></div>
+        </div>
+
+        <!-- Admin-only panel -->
+        <div class="panel hidden" id="admin-panel">
+          <h2>Admin &mdash; Users</h2>
+          <div id="user-list"></div>
+          <h3>Create admin account</h3>
+          <form id="create-admin-form">
+            <input type="email" name="email" placeholder="Email" required />
+            <input type="password" name="password" placeholder="Password" required />
+            <button type="submit">Create</button>
+          </form>
+        </div>
+      </main>
+    </section>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
