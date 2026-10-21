@@ -41,14 +41,6 @@ class _ForceAudienceCredential:
     def get_token(self, *scopes, **kwargs):
         return self._inner.get_token("https://ai.azure.com/.default", **kwargs)
 
-    async def get_token_info(self, *scopes, **kwargs):  # pragma: no cover
-        # Some azure-core versions probe for an async-capable credential;
-        # AIProjectClient here is sync, so this normally isn't called, but
-        # define it defensively rather than letting an AttributeError hide
-        # the real error.
-        token = self._inner.get_token("https://ai.azure.com/.default", **kwargs)
-        return token
-
 
 def get_foundry_client() -> AIProjectClient:
     global _client
