@@ -71,6 +71,7 @@ On `loomwell-app` -> **Configuration** -> **Application settings** -> add each o
 |---|---|
 | `SECRET_KEY` | any long random string |
 | `DATABASE_URL` | the PostgreSQL connection string from step 1b |
+| `FOUNDRY_PROJECT_ENDPOINT` | from the Foundry project's Overview page ("Project endpoint") |
 | `AZURE_SUBSCRIPTION_ID` | your subscription's GUID (Portal -> Subscriptions -> copy "Subscription ID") |
 | `AZURE_RESOURCE_GROUP` | the resource group that holds your Foundry project (e.g. the RG for `proj-uaenorth`) |
 | `FOUNDRY_PROJECT_NAME` | your Foundry project's name (e.g. `proj-uaenorth`) |

@@ -15,8 +15,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./loomwell_dev.db"  # local fallback only
 
     # --- Azure AI Foundry (CEO chatbot / RAG) ---
-    # The azure-ai-projects 1.0.0b5 SDK's AIProjectClient does NOT take an
-    # endpoint URL - it builds the connection from these three IDs instead.
+    # This SDK version (azure-ai-projects 1.0.0b5) needs ALL four of these
+    # together to build the client: endpoint + subscription/RG/project-name.
+    FOUNDRY_PROJECT_ENDPOINT: str = ""    # e.g. https://proj-uaenorth-resource.services.ai.azure.com/api/projects/proj-uaenorth
     AZURE_SUBSCRIPTION_ID: str = ""       # your Azure subscription GUID
     AZURE_RESOURCE_GROUP: str = ""        # resource group that holds the Foundry project (e.g. proj-uaenorth's RG)
     FOUNDRY_PROJECT_NAME: str = ""        # the Foundry project name (e.g. proj-uaenorth)
