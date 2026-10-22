@@ -78,3 +78,35 @@ button:hover { opacity: 0.9; }
 
 .radio-row { display: flex; gap: 16px; font-size: 13px; }
 .vision-result { margin-top: 14px; font-size: 13px; background: #fafbfd; border: 1px solid var(--border); border-radius: 8px; padding: 10px; white-space: pre-wrap; }
+
+#design-panel { grid-column: span 2; }
+#design-generate-form { flex-direction: row; }
+#design-focus { flex: 1; }
+#design-generate-btn:disabled { opacity: 0.6; cursor: wait; }
+#design-generate-status { color: #c0392b; }
+
+.design-gallery {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 16px;
+}
+.design-card {
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #fafbfd;
+}
+.design-card img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #eee; }
+.design-body { padding: 10px; }
+.status-badge {
+  display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 10px; margin-bottom: 6px;
+}
+.status-pending { background: #fff3cd; color: #856404; }
+.status-approved { background: #d4edda; color: #155724; }
+.status-rejected { background: #f8d7da; color: #721c24; }
+.design-summary {
+  font-size: 12.5px; color: var(--text); margin: 0 0 6px;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.design-sources { font-size: 11px; color: var(--muted); margin: 0 0 8px; }
+.design-sources a { color: var(--navy); }
+.design-actions { display: flex; gap: 8px; }
+.design-actions button { flex: 1; padding: 6px; font-size: 12px; }
+.approve-btn { background: #2e7d32 !important; }
+.reject-btn { background: #c0392b !important; }

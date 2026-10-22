@@ -81,6 +81,18 @@
             <button type="submit">Create</button>
           </form>
         </div>
+
+        <!-- Admin-only: Design Agent -->
+        <div class="panel hidden" id="design-panel">
+          <h2>Design Agent</h2>
+          <p class="hint">Researches current T-shirt trends live on the web, then generates a design from them.</p>
+          <form id="design-generate-form">
+            <input type="text" id="design-focus" placeholder="Optional: narrow the trend search (e.g. 'minimalist nature graphics')" />
+            <button type="submit" id="design-generate-btn">Generate new design</button>
+          </form>
+          <p class="note" id="design-generate-status"></p>
+          <div id="design-gallery" class="design-gallery"></div>
+        </div>
       </main>
     </section>
   </div>

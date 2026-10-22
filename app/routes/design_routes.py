@@ -181,3 +181,26 @@ def get_design_image(
     if not design:
         raise HTTPException(status_code=404, detail="Design not found")
     return Response(content=design.image_data, media_type="image/png")
+
+
+def _set_status(design_id: int, status: str, db: Session, _admin: User):
+    design = db.query(Design).filter(Design.id == design_id).first()
+    if not design:
+        raise HTTPException(status_code=404, detail="Design not found")
+    design.status = status
+    db.commit()
+    return {"status": "ok", "id": design.id, "new_status": status}
+
+
+@router.post("/api/admin/design/{design_id}/approve")
+def approve_design(
+    design_id: int, db: Session = Depends(get_db), _admin: User = Depends(require_admin)
+):
+    return _set_status(design_id, "approved", db, _admin)
+
+
+@router.post("/api/admin/design/{design_id}/reject")
+def reject_design(
+    design_id: int, db: Session = Depends(get_db), _admin: User = Depends(require_admin)
+):
+    return _set_status(design_id, "rejected", db, _admin)

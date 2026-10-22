@@ -57,7 +57,9 @@ async function enterDashboard() {
 
   if (me.role === "admin") {
     document.getElementById("admin-panel").classList.remove("hidden");
+    document.getElementById("design-panel").classList.remove("hidden");
     loadUsers();
+    loadDesigns();
   }
 
   loadChatHistory();
@@ -129,4 +131,84 @@ document.getElementById("create-admin-form").onsubmit = async (e) => {
   const form = new FormData(e.target);
   const res = await fetch("/api/admin/create-admin", { method: "POST", body: form });
   if (res.ok) { e.target.reset(); loadUsers(); }
+};
+
+// --- Design agent ---
+const designGallery = document.getElementById("design-gallery");
+const designStatusEl = document.getElementById("design-generate-status");
+
+async function loadDesigns() {
+  const res = await fetch("/api/admin/design/list");
+  if (!res.ok) return;
+  const designs = await res.json();
+  if (designs.length === 0) {
+    designGallery.innerHTML = '<p class="hint">No designs generated yet.</p>';
+    return;
+  }
+  designGallery.innerHTML = designs.map(designCardHtml).join("");
+
+  designs.forEach((d) => {
+    if (d.status !== "pending") return;
+    const approveBtn = document.getElementById(`approve-${d.id}`);
+    const rejectBtn = document.getElementById(`reject-${d.id}`);
+    if (approveBtn) approveBtn.onclick = () => reviewDesign(d.id, "approve");
+    if (rejectBtn) rejectBtn.onclick = () => reviewDesign(d.id, "reject");
+  });
+}
+
+function designCardHtml(d) {
+  const sourcesHtml = d.sources
+    .slice(0, 3)
+    .map((s) => `<a href="${s}" target="_blank" rel="noopener">${new URL(s).hostname}</a>`)
+    .join(", ");
+  const actions =
+    d.status === "pending"
+      ? `<div class="design-actions">
+           <button id="approve-${d.id}" class="approve-btn">Approve</button>
+           <button id="reject-${d.id}" class="reject-btn">Reject</button>
+         </div>`
+      : "";
+  return `
+    <div class="design-card">
+      <img src="${d.image_url}" alt="Generated design ${d.id}" loading="lazy" />
+      <div class="design-body">
+        <span class="status-badge status-${d.status}">${d.status}</span>
+        <p class="design-summary">${d.trend_summary}</p>
+        <p class="design-sources">Sources: ${sourcesHtml || "none"}</p>
+        ${actions}
+      </div>
+    </div>`;
+}
+
+async function reviewDesign(id, action) {
+  await fetch(`/api/admin/design/${id}/${action}`, { method: "POST" });
+  loadDesigns();
+}
+
+document.getElementById("design-generate-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("design-generate-btn");
+  const focus = document.getElementById("design-focus").value.trim();
+
+  btn.disabled = true;
+  btn.textContent = "Researching trends & generating...";
+  designStatusEl.textContent = "";
+
+  const form = new FormData();
+  if (focus) form.append("focus", focus);
+
+  try {
+    const res = await fetch("/api/admin/design/generate", { method: "POST", body: form });
+    const data = await res.json();
+    if (data.status !== "ok") {
+      designStatusEl.textContent = `Failed (${data.stage}): ${data.detail}`;
+    } else {
+      designStatusEl.textContent = "";
+      document.getElementById("design-focus").value = "";
+      loadDesigns();
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Generate new design";
+  }
 };
