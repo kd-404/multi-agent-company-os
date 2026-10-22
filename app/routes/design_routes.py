@@ -10,8 +10,9 @@ Pipeline, each run:
   2. That summary becomes the image prompt (plus fixed style instructions
      so the output is usable as an actual T-shirt graphic, not a mockup
      photo or a scene).
-  3. gpt-image-1.5 generates the image; we save it under app/static/designs
-     and record a Design row with status "pending".
+  3. gpt-image-1.5 generates the image; we save its bytes INTO a Design
+     row (not as a file on disk - see db.py's Design.image_data for why)
+     with status "pending".
 
 No live web search tool is attached to the image/chat models here - Tavily
 is called directly over HTTP, so this pipeline has no dependency on any
@@ -19,12 +20,10 @@ Foundry agent beyond the image deployment itself.
 """
 import base64
 import logging
-import uuid
-from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
-from fastapi import APIRouter, Depends, Form
+from fastapi import APIRouter, Depends, Form, HTTPException, Response
 from sqlalchemy.orm import Session
 from openai import OpenAI
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
@@ -35,9 +34,6 @@ from ..auth import require_admin
 
 log = logging.getLogger(__name__)
 router = APIRouter()
-
-DESIGNS_DIR = Path("app/static/designs")
-DESIGNS_DIR.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_TREND_QUERY = (
     "trending T-shirt graphic design patterns, colors and styles right now"
@@ -139,16 +135,12 @@ def generate_design(
         log.exception("Image generation failed")
         return {"status": "error", "stage": "image_generation", "detail": f"{type(e).__name__}: {e}"}
 
-    filename = f"{uuid.uuid4().hex}.png"
-    (DESIGNS_DIR / filename).write_bytes(image_bytes)
-    image_path = f"designs/{filename}"
-
     design = Design(
         trend_query=query,
         trend_summary=summary,
         sources="\n".join(sources),
         image_prompt=image_prompt,
-        image_path=image_path,
+        image_data=image_bytes,
         status="pending",
     )
     db.add(design)
@@ -158,7 +150,7 @@ def generate_design(
     return {
         "status": "ok",
         "id": design.id,
-        "image_url": f"/static/{image_path}",
+        "image_url": f"/api/admin/design/{design.id}/image",
         "trend_summary": summary,
         "sources": sources,
     }
@@ -173,9 +165,19 @@ def list_designs(db: Session = Depends(get_db), _admin: User = Depends(require_a
             "trend_query": d.trend_query,
             "trend_summary": d.trend_summary,
             "sources": d.sources.split("\n") if d.sources else [],
-            "image_url": f"/static/{d.image_path}",
+            "image_url": f"/api/admin/design/{d.id}/image",
             "status": d.status,
             "created_at": d.created_at.isoformat(),
         }
         for d in designs
     ]
+
+
+@router.get("/api/admin/design/{design_id}/image")
+def get_design_image(
+    design_id: int, db: Session = Depends(get_db), _admin: User = Depends(require_admin)
+):
+    design = db.query(Design).filter(Design.id == design_id).first()
+    if not design:
+        raise HTTPException(status_code=404, detail="Design not found")
+    return Response(content=design.image_data, media_type="image/png")

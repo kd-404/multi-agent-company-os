@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, LargeBinary
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime, timezone
 
@@ -39,6 +39,13 @@ class Design(Base):
     status starts "pending" (needs admin review); later an admin can
     approve/reject it. This table is the seed of the future product
     catalog - it's deliberately NOT the catalog itself yet.
+
+    The generated image is stored as bytes IN THIS ROW (image_data), not
+    as a file on disk. Azure App Service (Linux) runs the app from a
+    temp-extracted folder outside /home, which is wiped on every restart
+    or container recycle - files written there at runtime don't survive.
+    Postgres is the one piece of this stack that's actually persistent,
+    so that's where generated images live.
     """
     __tablename__ = "designs"
 
@@ -47,7 +54,7 @@ class Design(Base):
     trend_summary = Column(Text, nullable=False)            # Tavily's synthesized answer
     sources = Column(Text, nullable=True)                   # newline-separated source URLs
     image_prompt = Column(Text, nullable=False)              # what we actually sent to the image model
-    image_path = Column(String(500), nullable=False)         # relative path under /static
+    image_data = Column(LargeBinary, nullable=False)         # the PNG bytes themselves
     status = Column(String(20), nullable=False, default="pending")  # pending/approved/rejected
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
