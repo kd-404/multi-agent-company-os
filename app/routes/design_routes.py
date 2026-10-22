@@ -18,19 +18,16 @@ No live web search tool is attached to the image/chat models here - Tavily
 is called directly over HTTP, so this pipeline has no dependency on any
 Foundry agent beyond the image deployment itself.
 """
-import base64
 import logging
-from urllib.parse import urlsplit
 
 import httpx
 from fastapi import APIRouter, Depends, Form, HTTPException, Response
 from sqlalchemy.orm import Session
-from openai import OpenAI
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
 from ..config import settings
 from ..db import get_db, Design, User
 from ..auth import require_admin
+from ..image_client import generate_image
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -45,34 +42,6 @@ IMAGE_STYLE_SUFFIX = (
     "no readable text or logos, clean vector-illustration style, transparent-friendly "
     "flat background."
 )
-
-_image_client: OpenAI | None = None
-
-
-def _azure_openai_base_url() -> str:
-    """
-    Image generation is NOT served from the Foundry *project* endpoint
-    (<resource>.services.ai.azure.com/api/projects/<name>) that the chat
-    agent uses - that path only serves agent/thread operations and 404s on
-    /images/generations. It's served from the SAME host, under /openai/v1
-    instead - confirmed against the "View code" sample Foundry generates
-    for this exact deployment (not the generic openai.azure.com pattern
-    some Microsoft docs show, which 404s here). So we only swap the path,
-    never the host, deriving it from FOUNDRY_PROJECT_ENDPOINT instead of
-    needing a second URL typed into Azure App Settings.
-    """
-    parts = urlsplit(settings.FOUNDRY_PROJECT_ENDPOINT)
-    return f"{parts.scheme}://{parts.netloc}/openai/v1"
-
-
-def _get_image_client() -> OpenAI:
-    global _image_client
-    if _image_client is None:
-        token_provider = get_bearer_token_provider(
-            DefaultAzureCredential(), "https://ai.azure.com/.default"
-        )
-        _image_client = OpenAI(base_url=_azure_openai_base_url(), api_key=token_provider)
-    return _image_client
 
 
 def _research_trend(query: str) -> tuple[str, list[str]]:
@@ -100,19 +69,6 @@ def _research_trend(query: str) -> tuple[str, list[str]]:
     return summary, sources
 
 
-def _generate_image(prompt: str) -> bytes:
-    client = _get_image_client()
-    result = client.images.generate(
-        model=settings.FOUNDRY_IMAGE_DEPLOYMENT,
-        prompt=prompt,
-        size="1024x1024",
-        n=1,
-    )
-    # gpt-image-1/1.5 series always return base64, never a URL.
-    b64 = result.data[0].b64_json
-    return base64.b64decode(b64)
-
-
 @router.post("/api/admin/design/generate")
 def generate_design(
     focus: str = Form(default=""),  # optional: admin can narrow the trend search
@@ -130,7 +86,7 @@ def generate_design(
     image_prompt = f"{summary}{IMAGE_STYLE_SUFFIX}"
 
     try:
-        image_bytes = _generate_image(image_prompt)
+        image_bytes = generate_image(image_prompt, size="1024x1024")
     except Exception as e:
         log.exception("Image generation failed")
         return {"status": "error", "stage": "image_generation", "detail": f"{type(e).__name__}: {e}"}

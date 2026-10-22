@@ -59,6 +59,26 @@ class Design(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class MockupTemplate(Base):
+    """
+    One row per camera angle ("front", "back", "side") - a blank, plain
+    white T-shirt product photo generated ONCE via the design agent's same
+    image pipeline, then reused forever as the backdrop every approved
+    design gets composited onto (see app/compositing.py).
+
+    This is deliberately separate from Design: it's not a product a
+    customer sees, it's a fixed template asset. Re-running the generator
+    overwrites the row for that slot (upsert), so there's only ever one
+    "current" template per angle.
+    """
+    __tablename__ = "mockup_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slot = Column(String(20), unique=True, nullable=False)  # "front" | "back" | "side"
+    image_data = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 

@@ -59,6 +59,7 @@ async function enterDashboard() {
     document.getElementById("admin-panel").classList.remove("hidden");
     document.getElementById("design-panel").classList.remove("hidden");
     loadUsers();
+    await checkMockupTemplates();
     loadDesigns();
   }
 
@@ -136,6 +137,46 @@ document.getElementById("create-admin-form").onsubmit = async (e) => {
 // --- Design agent ---
 const designGallery = document.getElementById("design-gallery");
 const designStatusEl = document.getElementById("design-generate-status");
+const MOCKUP_SLOTS = ["front", "back", "side"];
+let mockupTemplatesReady = false;
+
+async function checkMockupTemplates() {
+  const hint = document.getElementById("mockup-setup-hint");
+  const btn = document.getElementById("mockup-setup-btn");
+  const res = await fetch("/api/admin/mockup-templates");
+  if (!res.ok) return;
+  const status = await res.json();
+  mockupTemplatesReady = MOCKUP_SLOTS.every((slot) => status[slot] && status[slot].generated);
+
+  if (mockupTemplatesReady) {
+    hint.textContent = "Mockup templates ready. Each approved design shows front/back/side previews below.";
+    btn.textContent = "Regenerate mockup templates";
+    btn.classList.remove("hidden");
+  } else {
+    hint.textContent = "Generate the blank T-shirt template photos once, so designs can be previewed on a shirt (front/back/side).";
+    btn.classList.remove("hidden");
+  }
+}
+
+document.getElementById("mockup-setup-btn").onclick = async (e) => {
+  const btn = e.target;
+  const hint = document.getElementById("mockup-setup-hint");
+  btn.disabled = true;
+  btn.textContent = "Generating template photos (takes a bit)...";
+  try {
+    const res = await fetch("/api/admin/mockup-templates/generate", { method: "POST" });
+    const data = await res.json();
+    const failed = Object.entries(data).filter(([, v]) => v.status !== "ok");
+    if (failed.length) {
+      hint.textContent = `Some templates failed: ${failed.map(([slot, v]) => `${slot} (${v.detail})`).join(", ")}`;
+    }
+    await checkMockupTemplates();
+    loadDesigns();
+  } finally {
+    btn.disabled = false;
+    if (btn.textContent.startsWith("Generating")) btn.textContent = "Regenerate mockup templates";
+  }
+};
 
 async function loadDesigns() {
   const res = await fetch("/api/admin/design/list");
@@ -168,6 +209,13 @@ function designCardHtml(d) {
            <button id="reject-${d.id}" class="reject-btn">Reject</button>
          </div>`
       : "";
+  const mockupsHtml = mockupTemplatesReady
+    ? `<div class="mockup-row">
+         ${MOCKUP_SLOTS.map(
+           (slot) => `<img src="/api/admin/design/${d.id}/mockup/${slot}" alt="${slot} mockup" loading="lazy" title="${slot}" />`
+         ).join("")}
+       </div>`
+    : `<p class="design-sources">Generate mockup templates above to preview this on a shirt.</p>`;
   return `
     <div class="design-card">
       <img src="${d.image_url}" alt="Generated design ${d.id}" loading="lazy" />
@@ -176,6 +224,7 @@ function designCardHtml(d) {
         <p class="design-summary">${d.trend_summary}</p>
         <p class="design-sources">Sources: ${sourcesHtml || "none"}</p>
         ${actions}
+        ${mockupsHtml}
       </div>
     </div>`;
 }

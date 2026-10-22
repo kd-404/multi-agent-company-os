@@ -110,3 +110,17 @@ button:hover { opacity: 0.9; }
 .design-actions button { flex: 1; padding: 6px; font-size: 12px; }
 .approve-btn { background: #2e7d32 !important; }
 .reject-btn { background: #c0392b !important; }
+
+.mockup-setup {
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.mockup-setup .hint { margin: 0; flex: 1; min-width: 220px; }
+#mockup-setup-btn { background: var(--navy); white-space: nowrap; }
+#mockup-setup-btn:disabled { opacity: 0.6; cursor: wait; }
+
+.mockup-row { display: flex; gap: 6px; margin-top: 4px; }
+.mockup-row img {
+  width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 6px;
+  border: 1px solid var(--border); background: #eee;
+}
