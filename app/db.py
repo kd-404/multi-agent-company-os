@@ -33,6 +33,25 @@ class ChatMessage(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class Design(Base):
+    """
+    Output of the design agent: one row per generated T-shirt design.
+    status starts "pending" (needs admin review); later an admin can
+    approve/reject it. This table is the seed of the future product
+    catalog - it's deliberately NOT the catalog itself yet.
+    """
+    __tablename__ = "designs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    trend_query = Column(String(500), nullable=False)      # what we searched for
+    trend_summary = Column(Text, nullable=False)            # Tavily's synthesized answer
+    sources = Column(Text, nullable=True)                   # newline-separated source URLs
+    image_prompt = Column(Text, nullable=False)              # what we actually sent to the image model
+    image_path = Column(String(500), nullable=False)         # relative path under /static
+    status = Column(String(20), nullable=False, default="pending")  # pending/approved/rejected
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 

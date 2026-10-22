@@ -78,6 +78,8 @@ On `loomwell-app` -> **Configuration** -> **Application settings** -> add each o
 | `FOUNDRY_CEO_AGENT_NAME` | the agent's name in New Foundry (default `ceo-assistant`; only set this if you named it differently) |
 | `VISION_ENDPOINT` | from step 1c |
 | `VISION_KEY` | from step 1c |
+| `TAVILY_API_KEY` | from your free account at tavily.com - used by the design agent for live trend research |
+| `FOUNDRY_IMAGE_DEPLOYMENT` | the deployment name of your image-generation model in Foundry (default `gpt-image-1.5`; only set this if you named it differently) |
 
 Also set the **Startup Command** under **Configuration -> Stack settings** (not "General settings"):
 ```

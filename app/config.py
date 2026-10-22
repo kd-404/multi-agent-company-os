@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     VISION_ENDPOINT: str = ""            # e.g. https://<your-vision-resource>.cognitiveservices.azure.com
     VISION_KEY: str = ""
 
+    # --- Design agent: trend research (Tavily) + image generation (Foundry) ---
+    TAVILY_API_KEY: str = ""             # from tavily.com dashboard, free tier
+    FOUNDRY_IMAGE_DEPLOYMENT: str = "gpt-image-1.5"  # deployment name from Foundry > Models
+
     class Config:
         env_file = ".env"
 

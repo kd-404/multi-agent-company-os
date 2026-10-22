@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from .config import settings
 from .db import init_db, get_db, User
 from .auth import get_current_user
-from .routes import auth_routes, admin_routes, chat_routes, vision_routes
+from .routes import auth_routes, admin_routes, chat_routes, vision_routes, design_routes
 
 app = FastAPI(title="Loomwell")
 
@@ -21,6 +21,7 @@ app.include_router(auth_routes.router)
 app.include_router(admin_routes.router)
 app.include_router(chat_routes.router)
 app.include_router(vision_routes.router)
+app.include_router(design_routes.router)
 
 
 @app.on_event("startup")
