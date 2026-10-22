@@ -89,11 +89,13 @@ async def visual_search(file: UploadFile = File(...), db: Session = Depends(get_
     image_bytes = await file.read()
     try:
         query_tags, query_color = extract_signals(image_bytes)
+        log.info("Visual search: query photo tagged OK: tags=%s color=%s", query_tags, query_color)
     except Exception:
         log.exception("Visual search: could not analyze the uploaded photo")
         raise HTTPException(status_code=400, detail="Couldn't read that as an image - try a JPG or PNG.")
 
     designs = db.query(Design).filter(Design.status == "approved").all()
+    log.info("Visual search: comparing against %d approved design(s)", len(designs))
     if not designs:
         return []
 
@@ -105,10 +107,12 @@ async def visual_search(file: UploadFile = File(...), db: Session = Depends(get_
                 tags, color = extract_signals(d.image_data)
                 d.vision_tags, d.dominant_color = tags_to_text(tags), color_to_text(color)
                 db.add(d)
+                log.info("Visual search: backfilled tags for design %s: tags=%s color=%s", d.id, tags, color)
             except Exception:
                 log.exception("Visual search: backfill tagging failed for design %s, skipping it this round", d.id)
                 continue
         score = match_score(query_tags, query_color, text_to_tags(d.vision_tags), text_to_color(d.dominant_color))
+        log.info("Visual search: design %s scored %.3f (tags=%s)", d.id, score, d.vision_tags)
         scored.append((score, d))
     db.commit()
 

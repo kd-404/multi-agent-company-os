@@ -101,8 +101,9 @@ def generate_design(
     try:
         tags, color = extract_signals(image_bytes)
         vision_tags_text, dominant_color_text = tags_to_text(tags), color_to_text(color)
+        log.info("Vision tagging OK for new design: tags=%s color=%s", tags, color)
     except Exception:
-        log.exception("Vision tagging failed for new design (non-fatal, will backfill on search)")
+        log.exception("Vision tagging FAILED for new design (non-fatal, will backfill on search)")
 
     design = Design(
         trend_query=query,
