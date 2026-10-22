@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     AZURE_SUBSCRIPTION_ID: str = ""       # your Azure subscription GUID
     AZURE_RESOURCE_GROUP: str = ""        # resource group that holds the Foundry project (e.g. proj-uaenorth's RG)
     FOUNDRY_PROJECT_NAME: str = ""        # the Foundry project name (e.g. proj-uaenorth)
-    FOUNDRY_CEO_AGENT_ID: str = ""        # set after creating the CEO agent in the portal
+    FOUNDRY_CEO_AGENT_ID: str = ""        # legacy (classic asst_... IDs); unused for New Foundry agents
+    FOUNDRY_CEO_AGENT_NAME: str = "ceo-assistant"  # New Foundry agents are called by NAME
 
     # --- Azure AI Vision (Lens feature) ---
     VISION_ENDPOINT: str = ""            # e.g. https://<your-vision-resource>.cognitiveservices.azure.com

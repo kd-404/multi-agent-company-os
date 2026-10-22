@@ -75,7 +75,7 @@ On `loomwell-app` -> **Configuration** -> **Application settings** -> add each o
 | `AZURE_SUBSCRIPTION_ID` | your subscription's GUID (Portal -> Subscriptions -> copy "Subscription ID") |
 | `AZURE_RESOURCE_GROUP` | the resource group that holds your Foundry project (e.g. the RG for `proj-uaenorth`) |
 | `FOUNDRY_PROJECT_NAME` | your Foundry project's name (e.g. `proj-uaenorth`) |
-| `FOUNDRY_CEO_AGENT_ID` | from step 1d |
+| `FOUNDRY_CEO_AGENT_NAME` | the agent's name in New Foundry (default `ceo-assistant`; only set this if you named it differently) |
 | `VISION_ENDPOINT` | from step 1c |
 | `VISION_KEY` | from step 1c |
 
