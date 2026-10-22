@@ -29,7 +29,7 @@ from ..config import settings
 from ..db import get_db, Design, SearchLog, User
 from ..auth import require_admin
 from ..image_client import generate_image
-from ..visual_search import compute_hash
+from ..visual_search import extract_signals, tags_to_text, color_to_text
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -93,13 +93,25 @@ def generate_design(
         log.exception("Image generation failed")
         return {"status": "error", "stage": "image_generation", "detail": f"{type(e).__name__}: {e}"}
 
+    # Tagging/color extraction feeds visual search (see app/visual_search.py)
+    # but isn't core to "did we get a design" - a Vision hiccup here
+    # shouldn't fail the whole generation. Falls back to untagged; a design
+    # with no tags yet gets backfilled lazily on first search.
+    vision_tags_text, dominant_color_text = None, None
+    try:
+        tags, color = extract_signals(image_bytes)
+        vision_tags_text, dominant_color_text = tags_to_text(tags), color_to_text(color)
+    except Exception:
+        log.exception("Vision tagging failed for new design (non-fatal, will backfill on search)")
+
     design = Design(
         trend_query=query,
         trend_summary=summary,
         sources="\n".join(sources),
         image_prompt=image_prompt,
         image_data=image_bytes,
-        image_hash=compute_hash(image_bytes),
+        vision_tags=vision_tags_text,
+        dominant_color=dominant_color_text,
         status="pending",
     )
     db.add(design)

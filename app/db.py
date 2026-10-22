@@ -56,7 +56,9 @@ class Design(Base):
     image_prompt = Column(Text, nullable=False)              # what we actually sent to the image model
     image_data = Column(LargeBinary, nullable=False)         # the PNG bytes themselves
     status = Column(String(20), nullable=False, default="pending")  # pending/approved/rejected
-    image_hash = Column(String(70), nullable=True)           # perceptual hash, see app/visual_search.py
+    image_hash = Column(String(70), nullable=True)           # legacy, unused (kept so no destructive migration is needed)
+    vision_tags = Column(Text, nullable=True)                 # comma-separated tags from Azure Vision, see app/visual_search.py
+    dominant_color = Column(String(20), nullable=True)        # "r,g,b" of the design itself, background excluded
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -104,10 +106,10 @@ def _run_lightweight_migrations():
     """
     Base.metadata.create_all only creates tables that don't exist yet - it
     never alters an existing table, so a new column added to an existing
-    model (like Design.image_hash here) needs to be added by hand. This
-    keeps that to one tiny, safe, idempotent statement instead of asking
-    for another DROP TABLE (which would wipe real approved designs/images
-    that already exist in production).
+    model (like Design.image_hash/vision_tags/dominant_color here) needs
+    to be added by hand. This keeps that to tiny, safe, idempotent
+    statements instead of asking for another DROP TABLE (which would wipe
+    real approved designs/images that already exist in production).
     """
     from sqlalchemy import text, inspect
 
@@ -115,15 +117,23 @@ def _run_lightweight_migrations():
     if "designs" not in inspector.get_table_names():
         return
     existing_columns = {c["name"] for c in inspector.get_columns("designs")}
-    if "image_hash" in existing_columns:
-        return
+
+    columns_to_add = {
+        "image_hash": "VARCHAR(70)",
+        "vision_tags": "TEXT",
+        "dominant_color": "VARCHAR(20)",
+    }
+    is_postgres = engine.dialect.name == "postgresql"
     with engine.begin() as conn:
-        if engine.dialect.name == "postgresql":
-            conn.execute(text("ALTER TABLE designs ADD COLUMN IF NOT EXISTS image_hash VARCHAR(70)"))
-        else:
-            # SQLite (local dev fallback) - no IF NOT EXISTS guard needed,
-            # we already checked the column is missing above.
-            conn.execute(text("ALTER TABLE designs ADD COLUMN image_hash VARCHAR(70)"))
+        for col_name, col_type in columns_to_add.items():
+            if col_name in existing_columns:
+                continue
+            if is_postgres:
+                conn.execute(text(f"ALTER TABLE designs ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
+            else:
+                # SQLite (local dev fallback) has no "IF NOT EXISTS" for
+                # ADD COLUMN, but we've already filtered to missing columns.
+                conn.execute(text(f"ALTER TABLE designs ADD COLUMN {col_name} {col_type}"))
 
 
 def get_db():

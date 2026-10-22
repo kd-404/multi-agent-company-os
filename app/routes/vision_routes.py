@@ -7,12 +7,10 @@ Two modes from the same uploaded image:
     flags a possible originality issue before a human ever reviews it
 """
 from fastapi import APIRouter, UploadFile, File, Form, Depends
-from azure.ai.vision.imageanalysis import ImageAnalysisClient
 from azure.ai.vision.imageanalysis.models import VisualFeatures
-from azure.core.credentials import AzureKeyCredential
 
-from ..config import settings
 from ..auth import get_current_user
+from ..vision_client import get_vision_client
 
 router = APIRouter()
 
@@ -22,13 +20,6 @@ DENY_LIST = [
     "nike", "adidas", "puma", "marvel", "disney", "star wars",
     "thalapathi", "nayakan",  # Tamil-film titles/star nicknames, per the brief
 ]
-
-
-def get_vision_client() -> ImageAnalysisClient:
-    return ImageAnalysisClient(
-        endpoint=settings.VISION_ENDPOINT,
-        credential=AzureKeyCredential(settings.VISION_KEY),
-    )
 
 
 @router.post("/api/vision/analyze")
