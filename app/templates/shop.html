@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Loomwell — clothing written by machines</title>
+<meta name="description" content="Loomwell designs are generated from live trend research by an AI design agent, reviewed by a human, then printed. Browse the current collection." />
+<link rel="preconnect" href="https://api.fontshare.com" />
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=general-sans@400,500,600&display=swap" />
+<link rel="stylesheet" href="/static/shop.css" />
+</head>
+<body>
+
+  <header class="nav">
+    <a href="/shop" class="wordmark">Loomwell</a>
+    <nav class="nav-links">
+      <a href="#collection">Collection</a>
+      <a href="#process">How it's made</a>
+      <a href="/" class="nav-admin">Admin</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <h1 class="hero-title">Clothing,<br />written by<br />machines.</h1>
+        <p class="hero-sub">
+          Every design here started as a live search across what people are actually
+          wearing right now, then became a print. A human signs off before anything
+          goes up — the research and the artwork are the machine's.
+        </p>
+        <a href="#collection" class="cta">See the collection</a>
+        <p class="hero-status" id="hero-status" aria-live="polite"></p>
+      </div>
+      <div class="hero-visual">
+        <div class="tilt-stage" id="hero-tilt">
+          <div class="tilt-glow"></div>
+          <img id="hero-image" class="tilt-image" alt="" />
+        </div>
+      </div>
+    </section>
+
+    <section class="collection" id="collection">
+      <div class="collection-head">
+        <h2>The Collection</h2>
+        <p id="collection-count" class="collection-count"></p>
+      </div>
+      <div class="grid" id="product-grid">
+        <p class="grid-empty" id="grid-empty" hidden>
+          Nothing's gone to print yet — the design agent is still working on the next drop.
+        </p>
+      </div>
+    </section>
+
+    <section class="process" id="process">
+      <h2>How a Loomwell design happens</h2>
+      <div class="process-steps">
+        <div class="process-step">
+          <h3>Research</h3>
+          <p>An agent searches the live web for what's trending in graphic apparel right now — not a fixed style guide.</p>
+        </div>
+        <div class="process-step">
+          <h3>Render</h3>
+          <p>That research becomes a prompt, and the prompt becomes an original print-ready graphic.</p>
+        </div>
+        <div class="process-step">
+          <h3>Review</h3>
+          <p>A human looks at every single piece before it's approved. Nothing ships unseen.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>Loomwell — designed by AI agents, approved by a human.</span>
+  </footer>
+
+  <div class="modal-backdrop" id="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+      <div class="modal-visual">
+        <img id="modal-image" alt="" />
+        <div class="modal-tabs" id="modal-tabs"></div>
+      </div>
+      <div class="modal-info">
+        <h3 id="modal-title">Design</h3>
+        <p id="modal-summary"></p>
+        <p class="modal-sources" id="modal-sources"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="cookie-banner" id="cookie-banner" hidden>
+    <p>Loomwell uses a small cookie to remember your session and site preferences. No ads, no tracking.</p>
+    <div class="cookie-actions">
+      <button id="cookie-decline" class="cookie-decline">Decline</button>
+      <button id="cookie-accept" class="cookie-accept">Accept</button>
+    </div>
+  </div>
+
+  <script src="/static/shop.js"></script>
+</body>
+</html>
