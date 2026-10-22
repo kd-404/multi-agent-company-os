@@ -55,18 +55,18 @@ _image_client: OpenAI | None = None
 
 def _azure_openai_base_url() -> str:
     """
-    Image generation lives on the Azure OpenAI resource itself
-    (<resource>.openai.azure.com), NOT the Foundry *project* endpoint
+    Image generation is NOT served from the Foundry *project* endpoint
     (<resource>.services.ai.azure.com/api/projects/<name>) that the chat
-    agent uses - calling images.generate() through the project endpoint
-    404s, since that path only serves agent/thread operations. Both share
-    the same resource name, just a different hostname suffix, so we derive
-    it from FOUNDRY_PROJECT_ENDPOINT instead of needing a second URL typed
-    into Azure App Settings.
+    agent uses - that path only serves agent/thread operations and 404s on
+    /images/generations. It's served from the SAME host, under /openai/v1
+    instead - confirmed against the "View code" sample Foundry generates
+    for this exact deployment (not the generic openai.azure.com pattern
+    some Microsoft docs show, which 404s here). So we only swap the path,
+    never the host, deriving it from FOUNDRY_PROJECT_ENDPOINT instead of
+    needing a second URL typed into Azure App Settings.
     """
     parts = urlsplit(settings.FOUNDRY_PROJECT_ENDPOINT)
-    resource_host = parts.netloc.replace(".services.ai.azure.com", ".openai.azure.com")
-    return f"{parts.scheme}://{resource_host}/openai/v1/"
+    return f"{parts.scheme}://{parts.netloc}/openai/v1"
 
 
 def _get_image_client() -> OpenAI:
