@@ -40,6 +40,23 @@
       </div>
     </section>
 
+    <section class="search" id="search">
+      <div class="search-box">
+        <div class="search-copy">
+          <h2>Find something like it</h2>
+          <p>Got a photo of a design you like? Upload it and we'll match it against the collection.</p>
+        </div>
+        <form id="search-form" class="search-form">
+          <label for="search-file" class="search-dropzone" id="search-dropzone">
+            <span id="search-dropzone-label">Choose a photo</span>
+          </label>
+          <input type="file" id="search-file" accept="image/*" hidden />
+          <button type="submit" id="search-submit" disabled>Find matches</button>
+        </form>
+      </div>
+      <div class="grid" id="search-results" hidden></div>
+    </section>
+
     <section class="collection" id="collection">
       <div class="collection-head">
         <h2>The Collection</h2>

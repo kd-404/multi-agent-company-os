@@ -56,6 +56,7 @@ class Design(Base):
     image_prompt = Column(Text, nullable=False)              # what we actually sent to the image model
     image_data = Column(LargeBinary, nullable=False)         # the PNG bytes themselves
     status = Column(String(20), nullable=False, default="pending")  # pending/approved/rejected
+    image_hash = Column(String(70), nullable=True)           # perceptual hash, see app/visual_search.py
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -79,8 +80,50 @@ class MockupTemplate(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class SearchLog(Base):
+    """
+    One row per visual-search request, used only to power the admin
+    "Customer interest" view: which approved designs keep coming up as the
+    best match for what visitors upload. This never stores the uploaded
+    photo itself, only which existing design it matched and how closely.
+    """
+    __tablename__ = "search_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    matched_design_id = Column(Integer, nullable=True, index=True)
+    score = Column(Integer, nullable=False)  # similarity * 100, as an int (0-100)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
+    _run_lightweight_migrations()
+
+
+def _run_lightweight_migrations():
+    """
+    Base.metadata.create_all only creates tables that don't exist yet - it
+    never alters an existing table, so a new column added to an existing
+    model (like Design.image_hash here) needs to be added by hand. This
+    keeps that to one tiny, safe, idempotent statement instead of asking
+    for another DROP TABLE (which would wipe real approved designs/images
+    that already exist in production).
+    """
+    from sqlalchemy import text, inspect
+
+    inspector = inspect(engine)
+    if "designs" not in inspector.get_table_names():
+        return
+    existing_columns = {c["name"] for c in inspector.get_columns("designs")}
+    if "image_hash" in existing_columns:
+        return
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text("ALTER TABLE designs ADD COLUMN IF NOT EXISTS image_hash VARCHAR(70)"))
+        else:
+            # SQLite (local dev fallback) - no IF NOT EXISTS guard needed,
+            # we already checked the column is missing above.
+            conn.execute(text("ALTER TABLE designs ADD COLUMN image_hash VARCHAR(70)"))
 
 
 def get_db():

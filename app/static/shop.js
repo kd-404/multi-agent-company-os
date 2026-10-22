@@ -35,12 +35,19 @@ async function loadProducts() {
 }
 
 function productCardHtml(p) {
+  const badge = typeof p.similarity === "number"
+    ? `<span class="search-match-badge">${p.similarity}% match</span>`
+    : "";
+  const meta = typeof p.similarity === "number"
+    ? `${p.sources.length} source${p.sources.length === 1 ? "" : "s"}`
+    : `${p.sources.length} source${p.sources.length === 1 ? "" : "s"} · ${formatDate(p.created_at)}`;
   return `
     <div class="product-card" data-id="${p.id}" tabindex="0" role="button" aria-label="View design">
+      ${badge}
       <img src="${p.mockups.front}" alt="" loading="lazy" />
       <div class="product-body">
         <p class="product-summary">${escapeHtml(p.trend_summary)}</p>
-        <p class="product-meta">${p.sources.length} source${p.sources.length === 1 ? "" : "s"} · ${formatDate(p.created_at)}</p>
+        <p class="product-meta">${meta}</p>
       </div>
     </div>`;
 }
@@ -58,6 +65,53 @@ function formatDate(iso) {
     return "";
   }
 }
+
+// --- Visual search ("find similar") ---
+const searchFile = document.getElementById("search-file");
+const searchDropzone = document.getElementById("search-dropzone");
+const searchDropzoneLabel = document.getElementById("search-dropzone-label");
+const searchSubmit = document.getElementById("search-submit");
+const searchResults = document.getElementById("search-results");
+
+searchFile.addEventListener("change", () => {
+  const file = searchFile.files[0];
+  searchDropzoneLabel.textContent = file ? file.name : "Choose a photo";
+  searchSubmit.disabled = !file;
+});
+
+document.getElementById("search-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const file = searchFile.files[0];
+  if (!file) return;
+
+  searchSubmit.disabled = true;
+  searchSubmit.textContent = "Searching…";
+
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/public/visual-search", { method: "POST", body: form });
+    if (!res.ok) {
+      searchResults.hidden = false;
+      searchResults.innerHTML = `<p class="grid-empty">Couldn't search that image — try a different photo.</p>`;
+      return;
+    }
+    const matches = await res.json();
+    searchResults.hidden = false;
+    if (matches.length === 0) {
+      searchResults.innerHTML = `<p class="grid-empty">No matches yet — the collection is still small.</p>`;
+      return;
+    }
+    searchResults.innerHTML = matches.map(productCardHtml).join("");
+    searchResults.querySelectorAll(".product-card").forEach((card) => {
+      card.addEventListener("click", () => openModal(Number(card.dataset.id)));
+    });
+    searchResults.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
+  } finally {
+    searchSubmit.disabled = false;
+    searchSubmit.textContent = "Find matches";
+  }
+});
 
 // --- Hero: featured piece + mousemove 3D tilt ---
 function setupHero(product) {

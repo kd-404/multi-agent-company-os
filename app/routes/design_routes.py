@@ -19,15 +19,17 @@ is called directly over HTTP, so this pipeline has no dependency on any
 Foundry agent beyond the image deployment itself.
 """
 import logging
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from fastapi import APIRouter, Depends, Form, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from ..config import settings
-from ..db import get_db, Design, User
+from ..db import get_db, Design, SearchLog, User
 from ..auth import require_admin
 from ..image_client import generate_image
+from ..visual_search import compute_hash
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -97,6 +99,7 @@ def generate_design(
         sources="\n".join(sources),
         image_prompt=image_prompt,
         image_data=image_bytes,
+        image_hash=compute_hash(image_bytes),
         status="pending",
     )
     db.add(design)
@@ -160,3 +163,50 @@ def reject_design(
     design_id: int, db: Session = Depends(get_db), _admin: User = Depends(require_admin)
 ):
     return _set_status(design_id, "rejected", db, _admin)
+
+
+TREND_WINDOW_DAYS = 7
+TREND_MIN_SEARCHES = 2  # how many "find similar" hits in the window count as a trend
+
+
+@router.get("/api/admin/search-trends")
+def search_trends(db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
+    """
+    The "notify the admin" half of visual search: every public
+    /api/public/visual-search call logs which approved design it matched
+    best. This groups those hits over the last TREND_WINDOW_DAYS and
+    surfaces any design that came up at least TREND_MIN_SEARCHES times -
+    i.e. "customers keep uploading photos that look like this one."
+
+    This is a dashboard feed the admin checks, not a push notification
+    (no email/SMS is wired up to this project) - see the panel on the
+    admin dashboard.
+    """
+    window_start = datetime.now(timezone.utc) - timedelta(days=TREND_WINDOW_DAYS)
+    logs = (
+        db.query(SearchLog)
+        .filter(SearchLog.created_at >= window_start, SearchLog.matched_design_id.isnot(None))
+        .all()
+    )
+
+    counts: dict[int, int] = {}
+    for entry in logs:
+        counts[entry.matched_design_id] = counts.get(entry.matched_design_id, 0) + 1
+
+    trending = []
+    for design_id, count in counts.items():
+        if count < TREND_MIN_SEARCHES:
+            continue
+        design = db.query(Design).filter(Design.id == design_id).first()
+        if not design:
+            continue
+        trending.append({
+            "design_id": design_id,
+            "search_count": count,
+            "trend_summary": design.trend_summary,
+            "image_url": f"/api/admin/design/{design_id}/image",
+            "status": design.status,
+        })
+
+    trending.sort(key=lambda t: t["search_count"], reverse=True)
+    return trending

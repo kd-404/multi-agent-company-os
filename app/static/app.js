@@ -58,9 +58,11 @@ async function enterDashboard() {
   if (me.role === "admin") {
     document.getElementById("admin-panel").classList.remove("hidden");
     document.getElementById("design-panel").classList.remove("hidden");
+    document.getElementById("interest-panel").classList.remove("hidden");
     loadUsers();
     await checkMockupTemplates();
     loadDesigns();
+    loadSearchTrends();
   }
 
   loadChatHistory();
@@ -232,6 +234,29 @@ function designCardHtml(d) {
 async function reviewDesign(id, action) {
   await fetch(`/api/admin/design/${id}/${action}`, { method: "POST" });
   loadDesigns();
+}
+
+// --- Customer interest (visual-search trend alerts) ---
+async function loadSearchTrends() {
+  const el = document.getElementById("interest-list");
+  const res = await fetch("/api/admin/search-trends");
+  if (!res.ok) return;
+  const trends = await res.json();
+
+  if (trends.length === 0) {
+    el.innerHTML = '<p class="hint">No repeated search interest in the last 7 days yet.</p>';
+    return;
+  }
+
+  el.innerHTML = trends.map((t) => `
+    <div class="interest-row">
+      <img src="${t.image_url}" alt="" loading="lazy" />
+      <div>
+        <p class="interest-count">${t.search_count} searches matched this design (last 7 days)</p>
+        <p class="interest-summary">${t.trend_summary}</p>
+      </div>
+    </div>
+  `).join("");
 }
 
 document.getElementById("design-generate-form").onsubmit = async (e) => {
