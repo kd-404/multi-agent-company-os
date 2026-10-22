@@ -21,12 +21,13 @@ import base64
 import logging
 import uuid
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import httpx
 from fastapi import APIRouter, Depends, Form
 from sqlalchemy.orm import Session
-from azure.ai.projects import AIProjectClient
-from azure.identity import DefaultAzureCredential
+from openai import OpenAI
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
 from ..config import settings
 from ..db import get_db, Design, User
@@ -49,19 +50,33 @@ IMAGE_STYLE_SUFFIX = (
     "flat background."
 )
 
-_project: AIProjectClient | None = None
-_openai = None
+_image_client: OpenAI | None = None
 
 
-def _get_openai_client():
-    global _project, _openai
-    if _openai is None:
-        _project = AIProjectClient(
-            endpoint=settings.FOUNDRY_PROJECT_ENDPOINT,
-            credential=DefaultAzureCredential(),
+def _azure_openai_base_url() -> str:
+    """
+    Image generation lives on the Azure OpenAI resource itself
+    (<resource>.openai.azure.com), NOT the Foundry *project* endpoint
+    (<resource>.services.ai.azure.com/api/projects/<name>) that the chat
+    agent uses - calling images.generate() through the project endpoint
+    404s, since that path only serves agent/thread operations. Both share
+    the same resource name, just a different hostname suffix, so we derive
+    it from FOUNDRY_PROJECT_ENDPOINT instead of needing a second URL typed
+    into Azure App Settings.
+    """
+    parts = urlsplit(settings.FOUNDRY_PROJECT_ENDPOINT)
+    resource_host = parts.netloc.replace(".services.ai.azure.com", ".openai.azure.com")
+    return f"{parts.scheme}://{resource_host}/openai/v1/"
+
+
+def _get_image_client() -> OpenAI:
+    global _image_client
+    if _image_client is None:
+        token_provider = get_bearer_token_provider(
+            DefaultAzureCredential(), "https://ai.azure.com/.default"
         )
-        _openai = _project.get_openai_client()
-    return _openai
+        _image_client = OpenAI(base_url=_azure_openai_base_url(), api_key=token_provider)
+    return _image_client
 
 
 def _research_trend(query: str) -> tuple[str, list[str]]:
@@ -90,13 +105,14 @@ def _research_trend(query: str) -> tuple[str, list[str]]:
 
 
 def _generate_image(prompt: str) -> bytes:
-    client = _get_openai_client()
+    client = _get_image_client()
     result = client.images.generate(
         model=settings.FOUNDRY_IMAGE_DEPLOYMENT,
         prompt=prompt,
         size="1024x1024",
         n=1,
     )
+    # gpt-image-1/1.5 series always return base64, never a URL.
     b64 = result.data[0].b64_json
     return base64.b64decode(b64)
 
