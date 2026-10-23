@@ -27,6 +27,7 @@ from ..db import get_db, Design, User
 from ..auth import require_admin
 from ..trend_research import research_trend
 from ..agent_log import log_activity
+from .design_routes import _generate_one_design
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -113,11 +114,30 @@ def scan_trends(db: Session = Depends(get_db), _admin: User = Depends(require_ad
         best_overlap = max(best_overlap, overlap)
 
     flagged = (not approved) or best_overlap < OVERLAP_THRESHOLD
+    generated = None
+
     if flagged:
         log_activity(
             db, "marketing", "alert",
             f"New trend not yet in the catalog: {summary[:240]}",
         )
+        # Don't just flag it - close the loop by actually commissioning a
+        # design for the gap the agent just found, same as the demo
+        # pipeline does, so "scan for trends" visibly produces output
+        # instead of a passive note nobody acts on.
+        result = _generate_one_design(TREND_RADAR_QUERY, db)
+        if result["status"] == "ok":
+            generated = result["id"]
+            log_activity(
+                db, "marketing", "ok",
+                f"Commissioned design #{generated} from the Design agent to cover that gap - pending review.",
+                design_id=generated,
+            )
+        else:
+            log_activity(
+                db, "marketing", "error",
+                f"Flagged a trend gap but couldn't commission a design for it: {result.get('detail')}",
+            )
     else:
         log_activity(
             db, "marketing", "ok",
@@ -129,6 +149,7 @@ def scan_trends(db: Session = Depends(get_db), _admin: User = Depends(require_ad
         "summary": summary,
         "sources": sources,
         "best_overlap": round(best_overlap, 2),
+        "generated_design_id": generated,
     }
 
 

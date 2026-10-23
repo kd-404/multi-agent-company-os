@@ -56,12 +56,10 @@ async function enterDashboard() {
   dashboardScreen.classList.remove("hidden");
 
   if (me.role === "admin") {
-    document.getElementById("admin-panel").classList.remove("hidden");
-    document.getElementById("design-panel").classList.remove("hidden");
-    document.getElementById("interest-panel").classList.remove("hidden");
-    document.getElementById("agents-panel").classList.remove("hidden");
-    document.getElementById("marketing-panel").classList.remove("hidden");
-    document.getElementById("warehouse-panel").classList.remove("hidden");
+    ["admin-panel", "design-panel", "interest-panel", "agents-panel", "marketing-panel", "warehouse-panel"].forEach((id) => {
+      document.getElementById(id).classList.remove("hidden");
+    });
+    document.querySelectorAll(".sidebar-link[data-target]").forEach((a) => a.classList.remove("hidden"));
     loadUsers();
     await checkMockupTemplates();
     loadDesigns();
@@ -70,9 +68,73 @@ async function enterDashboard() {
     loadAgentFeed();
     loadMarketingFeed();
     loadWarehouseStatus();
+    loadStatRow();
   }
 
   loadChatHistory();
+  setupSidebarScrollspy();
+}
+
+// --- Sidebar: scrollspy (highlight the section currently in view) ---
+function setupSidebarScrollspy() {
+  const links = Array.from(document.querySelectorAll(".sidebar-link[data-target]"));
+  if (!links.length) return;
+
+  const setActive = (id) => {
+    links.forEach((a) => a.classList.toggle("active", a.dataset.target === id));
+  };
+
+  links.forEach((a) => {
+    a.addEventListener("click", () => setActive(a.dataset.target));
+  });
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const visible = entries.filter((e) => e.isIntersecting);
+      if (visible.length) setActive(visible[0].target.id);
+    },
+    { rootMargin: "-20% 0px -70% 0px" }
+  );
+  links.forEach((a) => {
+    const section = document.getElementById(a.dataset.target);
+    if (section) observer.observe(section);
+  });
+}
+
+// --- Stat row: dashboard-home summary cards, built from data already loaded ---
+async function loadStatRow() {
+  const el = document.getElementById("stat-row");
+  try {
+    const [designs, users, warehouse, feed] = await Promise.all([
+      fetch("/api/admin/design/list").then((r) => (r.ok ? r.json() : [])),
+      fetch("/api/admin/users").then((r) => (r.ok ? r.json() : [])),
+      fetch("/api/admin/warehouse/status").then((r) => (r.ok ? r.json() : [])),
+      fetch("/api/admin/agents/feed").then((r) => (r.ok ? r.json() : [])),
+    ]);
+
+    const approved = designs.filter((d) => d.status === "approved").length;
+    const pending = designs.filter((d) => d.status === "pending").length;
+    const customers = users.filter((u) => u.role === "user").length;
+    const reprintFlags = warehouse.filter((w) => w.recommend_reprint).length;
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const alerts24h = feed.filter((f) => (f.status === "alert" || f.status === "error") && new Date(f.created_at).getTime() >= dayAgo).length;
+
+    const cards = [
+      { label: "Designs", value: designs.length, sub: `${approved} approved · ${pending} pending` },
+      { label: "Customers", value: customers, sub: "registered accounts" },
+      { label: "Agent alerts (24h)", value: alerts24h, sub: "across all agents", cls: alerts24h ? "stat-alert" : "stat-ok" },
+      { label: "Reprint recommended", value: reprintFlags, sub: "low stock + high interest", cls: reprintFlags ? "stat-alert" : "stat-ok" },
+    ];
+
+    el.innerHTML = cards.map((c) => `
+      <div class="stat-card ${c.cls || ""}">
+        <p class="stat-label">${c.label}</p>
+        <p class="stat-value">${c.value}</p>
+        <p class="stat-sub">${c.sub}</p>
+      </div>`).join("");
+  } catch (e) {
+    el.innerHTML = "";
+  }
 }
 
 // --- Chat ---
@@ -449,11 +511,16 @@ document.getElementById("scan-trends-btn").addEventListener("click", async () =>
   try {
     const res = await fetch("/api/admin/marketing/scan-trends", { method: "POST" });
     const data = await res.json();
-    statusEl.textContent = data.flagged
-      ? `New trend not yet in the catalog (best overlap ${Math.round(data.best_overlap * 100)}%): ${data.summary}`
-      : `Catalog already covers current trends (best overlap ${Math.round(data.best_overlap * 100)}%).`;
+    if (data.flagged && data.generated_design_id) {
+      statusEl.textContent = `New trend found - commissioned design #${data.generated_design_id} to cover it (pending review in the Design Agent panel below).`;
+    } else if (data.flagged) {
+      statusEl.textContent = `New trend found (best overlap ${Math.round(data.best_overlap * 100)}%), but the Design agent couldn't generate for it - check Log Stream.`;
+    } else {
+      statusEl.textContent = `Catalog already covers current trends (best overlap ${Math.round(data.best_overlap * 100)}%).`;
+    }
     loadAgentStatus();
     loadAgentFeed();
+    if (data.generated_design_id) loadDesigns();
   } catch (e) {
     statusEl.textContent = "Trend scan failed - check Log Stream.";
   } finally {

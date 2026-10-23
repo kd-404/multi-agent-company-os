@@ -4,6 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Loomwell</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
@@ -40,110 +43,165 @@
 
     <!-- Dashboard -->
     <section id="dashboard-screen" class="screen hidden">
-      <header class="topbar">
-        <div><strong>Loomwell</strong> <span id="role-badge" class="badge"></span></div>
-        <div><span id="user-email"></span> &nbsp; <button id="logout-btn">Log out</button></div>
-      </header>
+      <div class="admin-shell">
 
-      <main class="grid">
-        <!-- CEO Chatbot -->
-        <div class="panel">
-          <h2>Ask the CEO Assistant</h2>
-          <p class="hint">Ask about ongoing projects, people, or status. Answers are grounded in Loomwell's project docs.</p>
-          <div id="chat-log" class="chat-log"></div>
-          <form id="chat-form">
-            <input type="text" id="chat-input" placeholder="e.g. What's the status of the Design Studio build?" autocomplete="off" />
-            <button type="submit">Send</button>
-          </form>
-        </div>
+        <aside class="sidebar">
+          <div class="sidebar-brand">
+            <span class="sidebar-mark">L</span>
+            <span class="sidebar-brand-text">Loomwell</span>
+          </div>
+          <nav class="sidebar-nav">
+            <a href="#agents-panel" class="sidebar-link active hidden" data-target="agents-panel">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+              Agent Status
+            </a>
+            <a href="#design-panel" class="sidebar-link hidden" data-target="design-panel">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.5-6.3 4.5 2.3-7.2-6-4.6h7.6z"/></svg>
+              Design Studio
+            </a>
+            <a href="#marketing-panel" class="sidebar-link hidden" data-target="marketing-panel">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-7-7 18-2.5-7.5L3 11z"/></svg>
+              Marketing
+            </a>
+            <a href="#warehouse-panel" class="sidebar-link hidden" data-target="warehouse-panel">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3V9.5z"/><path d="M9 21v-7h6v7"/></svg>
+              Warehouse
+            </a>
+            <a href="#interest-panel" class="sidebar-link hidden" data-target="interest-panel">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              Customer Interest
+            </a>
+            <a href="#vision-panel" class="sidebar-link" data-target="vision-panel">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              Vision Lens
+            </a>
+            <a href="#chat-panel" class="sidebar-link" data-target="chat-panel">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              CEO Assistant
+            </a>
+            <a href="#admin-panel" class="sidebar-link hidden" data-target="admin-panel">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Users
+            </a>
+          </nav>
+        </aside>
 
-        <!-- Vision Lens -->
-        <div class="panel">
-          <h2>Vision Lens</h2>
-          <p class="hint">Upload an image to analyze it, or check a design for originality issues.</p>
-          <form id="vision-form">
-            <input type="file" id="vision-file" accept="image/*" required />
-            <div class="radio-row">
-              <label><input type="radio" name="mode" value="general" checked /> General detection</label>
-              <label><input type="radio" name="mode" value="design_check" /> Design originality check</label>
+        <div class="admin-main">
+          <header class="topbar">
+            <div class="topbar-title">
+              <strong>Dashboard</strong>
+              <span class="topbar-sub">Live multi-agent operations</span>
             </div>
-            <button type="submit">Analyze</button>
-          </form>
-          <div id="vision-result" class="vision-result"></div>
+            <div class="topbar-right">
+              <span id="role-badge" class="badge"></span>
+              <span id="user-email" class="topbar-email"></span>
+              <button id="logout-btn">Log out</button>
+            </div>
+          </header>
+
+          <div class="stat-row" id="stat-row"></div>
+
+          <main class="grid">
+            <!-- Admin-only: live multi-agent status + full pipeline demo -->
+            <div class="panel hidden" id="agents-panel">
+              <h2>Agent Status</h2>
+              <p class="hint">Design, Marketing, Warehouse, Payment and the CEO agent, live &mdash; each card is that agent's own most recent activity, not a heartbeat. "Run full pipeline" fires a real pass through all five, in order, right now.</p>
+              <div id="agent-cards" class="agent-cards"></div>
+              <button type="button" id="run-demo-btn">Run full pipeline demo</button>
+              <p class="note" id="run-demo-status"></p>
+              <h3>Recent activity</h3>
+              <div id="agent-feed" class="agent-feed"></div>
+            </div>
+
+            <!-- Admin-only: Design Agent -->
+            <div class="panel hidden" id="design-panel">
+              <h2>Design Agent</h2>
+              <p class="hint">Researches current T-shirt trends live on the web, then generates a design from them.</p>
+              <form id="design-generate-form">
+                <input type="text" id="design-focus" placeholder="Optional: narrow the trend search (e.g. 'minimalist nature graphics')" />
+                <button type="submit" id="design-generate-btn">Generate new design</button>
+              </form>
+              <p class="note" id="design-generate-status"></p>
+
+              <div class="batch-generate">
+                <button type="button" id="batch-generate-btn">Generate a batch of 8 (varied styles)</button>
+                <p class="hint">Runs 8 generations across different style presets (streetwear, line-art, nature, retro, etc.) instead of one generic look repeated. Takes a few minutes &mdash; stay on this page.</p>
+                <p class="note" id="batch-generate-status"></p>
+              </div>
+
+              <div class="mockup-setup">
+                <p class="hint" id="mockup-setup-hint">Checking mockup templates&hellip;</p>
+                <button type="button" id="mockup-setup-btn" class="hidden">Generate mockup templates (one-time setup)</button>
+              </div>
+
+              <div id="design-gallery" class="design-gallery"></div>
+            </div>
+
+            <!-- Admin-only: Marketing Agent -->
+            <div class="panel hidden" id="marketing-panel">
+              <h2>Marketing Agent</h2>
+              <p class="hint">Trend radar checks live research against what's already in the catalog &mdash; when it finds a real gap, it commissions a new design from the Design agent itself, it doesn't just note it. Caption drafts are built from each design's own trend research and Vision tags, no extra AI call per design.</p>
+              <button type="button" id="scan-trends-btn">Scan for new trends</button>
+              <p class="note" id="scan-trends-status"></p>
+              <div id="marketing-list" class="marketing-list"></div>
+            </div>
+
+            <!-- Admin-only: Warehouse Agent -->
+            <div class="panel hidden" id="warehouse-panel">
+              <h2>Warehouse Agent</h2>
+              <p class="hint">Loomwell prints on demand, so "stock" is a simulated count the agent manages itself &mdash; it flags low stock + sustained interest on its own and recommends a reprint, the same way the CEO assistant answers a status question.</p>
+              <button type="button" id="warehouse-scan-btn">Run stock check</button>
+              <p class="note" id="warehouse-scan-status"></p>
+              <div id="warehouse-list" class="warehouse-list"></div>
+            </div>
+
+            <!-- Admin-only: Customer interest alerts (from the public visual-search feature) -->
+            <div class="panel hidden" id="interest-panel">
+              <h2>Customer Interest</h2>
+              <p class="hint">When shoppers use "Find something like it" on the public site, repeated matches against the same design show up here &mdash; a signal worth reacting to, even without email alerts wired up yet.</p>
+              <div id="interest-list"></div>
+            </div>
+
+            <!-- Vision Lens -->
+            <div class="panel" id="vision-panel">
+              <h2>Vision Lens</h2>
+              <p class="hint">Upload an image to analyze it, or check a design for originality issues.</p>
+              <form id="vision-form">
+                <input type="file" id="vision-file" accept="image/*" required />
+                <div class="radio-row">
+                  <label><input type="radio" name="mode" value="general" checked /> General detection</label>
+                  <label><input type="radio" name="mode" value="design_check" /> Design originality check</label>
+                </div>
+                <button type="submit">Analyze</button>
+              </form>
+              <div id="vision-result" class="vision-result"></div>
+            </div>
+
+            <!-- CEO Chatbot -->
+            <div class="panel" id="chat-panel">
+              <h2>Ask the CEO Assistant</h2>
+              <p class="hint">Ask about ongoing projects, people, or status. Answers are grounded in Loomwell's project docs.</p>
+              <div id="chat-log" class="chat-log"></div>
+              <form id="chat-form">
+                <input type="text" id="chat-input" placeholder="e.g. What's the status of the Design Studio build?" autocomplete="off" />
+                <button type="submit">Send</button>
+              </form>
+            </div>
+
+            <!-- Admin-only panel -->
+            <div class="panel hidden" id="admin-panel">
+              <h2>Admin &mdash; Users</h2>
+              <div id="user-list"></div>
+              <h3>Create admin account</h3>
+              <form id="create-admin-form">
+                <input type="email" name="email" placeholder="Email" required />
+                <input type="password" name="password" placeholder="Password" required />
+                <button type="submit">Create</button>
+              </form>
+            </div>
+          </main>
         </div>
-
-        <!-- Admin-only panel -->
-        <div class="panel hidden" id="admin-panel">
-          <h2>Admin &mdash; Users</h2>
-          <div id="user-list"></div>
-          <h3>Create admin account</h3>
-          <form id="create-admin-form">
-            <input type="email" name="email" placeholder="Email" required />
-            <input type="password" name="password" placeholder="Password" required />
-            <button type="submit">Create</button>
-          </form>
-        </div>
-
-        <!-- Admin-only: Design Agent -->
-        <div class="panel hidden" id="design-panel">
-          <h2>Design Agent</h2>
-          <p class="hint">Researches current T-shirt trends live on the web, then generates a design from them.</p>
-          <form id="design-generate-form">
-            <input type="text" id="design-focus" placeholder="Optional: narrow the trend search (e.g. 'minimalist nature graphics')" />
-            <button type="submit" id="design-generate-btn">Generate new design</button>
-          </form>
-          <p class="note" id="design-generate-status"></p>
-
-          <div class="batch-generate">
-            <button type="button" id="batch-generate-btn">Generate a batch of 8 (varied styles)</button>
-            <p class="hint">Runs 8 generations across different style presets (streetwear, line-art, nature, retro, etc.) instead of one generic look repeated. Takes a few minutes &mdash; stay on this page.</p>
-            <p class="note" id="batch-generate-status"></p>
-          </div>
-
-          <div class="mockup-setup">
-            <p class="hint" id="mockup-setup-hint">Checking mockup templates&hellip;</p>
-            <button type="button" id="mockup-setup-btn" class="hidden">Generate mockup templates (one-time setup)</button>
-          </div>
-
-          <div id="design-gallery" class="design-gallery"></div>
-        </div>
-
-        <!-- Admin-only: Customer interest alerts (from the public visual-search feature) -->
-        <div class="panel hidden" id="interest-panel">
-          <h2>Customer Interest</h2>
-          <p class="hint">When shoppers use "Find something like it" on the public site, repeated matches against the same design show up here &mdash; a signal worth reacting to, even without email alerts wired up yet.</p>
-          <div id="interest-list"></div>
-        </div>
-
-        <!-- Admin-only: live multi-agent status + full pipeline demo -->
-        <div class="panel hidden" id="agents-panel">
-          <h2>Agent Status</h2>
-          <p class="hint">Design, Marketing, Warehouse, Payment and the CEO agent, live &mdash; each card is that agent's own most recent activity, not a heartbeat. "Run full pipeline" fires a real pass through all five, in order, right now.</p>
-          <div id="agent-cards" class="agent-cards"></div>
-          <button type="button" id="run-demo-btn">Run full pipeline demo</button>
-          <p class="note" id="run-demo-status"></p>
-          <h3>Recent activity</h3>
-          <div id="agent-feed" class="agent-feed"></div>
-        </div>
-
-        <!-- Admin-only: Marketing Agent -->
-        <div class="panel hidden" id="marketing-panel">
-          <h2>Marketing Agent</h2>
-          <p class="hint">Trend radar checks live research against what's already in the catalog. Caption drafts are built from each design's own trend research and Vision tags &mdash; no extra AI call per design.</p>
-          <button type="button" id="scan-trends-btn">Scan for new trends</button>
-          <p class="note" id="scan-trends-status"></p>
-          <div id="marketing-list" class="marketing-list"></div>
-        </div>
-
-        <!-- Admin-only: Warehouse Agent -->
-        <div class="panel hidden" id="warehouse-panel">
-          <h2>Warehouse Agent</h2>
-          <p class="hint">Loomwell prints on demand, so "stock" is a simulated count the agent manages itself &mdash; it flags low stock + sustained interest on its own and recommends a reprint, the same way the CEO assistant answers a status question.</p>
-          <button type="button" id="warehouse-scan-btn">Run stock check</button>
-          <p class="note" id="warehouse-scan-status"></p>
-          <div id="warehouse-list" class="warehouse-list"></div>
-        </div>
-      </main>
+      </div>
     </section>
   </div>
 
