@@ -280,6 +280,37 @@ a { color: inherit; }
   display: block;
 }
 
+/* ---------- trust strip ---------- */
+.trust-strip {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 48px 48px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  position: relative;
+  z-index: 2;
+}
+.trust-item {
+  text-align: center;
+  padding: 0 16px;
+  border-left: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.trust-item:first-child { border-left: none; }
+.trust-item strong {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 28px;
+  color: var(--lavender);
+}
+.trust-item span {
+  font-size: 12.5px;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
 /* ---------- search ---------- */
 .search {
   max-width: 1320px;
@@ -409,13 +440,32 @@ a { color: inherit; }
   transform: rotateX(4deg) rotateY(-6deg) translateY(-6px);
   border-color: var(--lavender);
 }
+.product-card .product-media { position: relative; overflow: hidden; }
 .product-card img {
   width: 100%;
   aspect-ratio: 2 / 3;
   object-fit: cover;
   display: block;
   background: var(--ink-deep);
+  transition: transform 0.4s ease;
 }
+.product-card:hover img, .product-card:focus-visible img { transform: scale(1.045); }
+.product-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 14px 18px;
+  background: linear-gradient(to top, rgba(5, 5, 9, 0.88), transparent);
+  color: var(--neon);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+.product-card:hover .product-overlay,
+.product-card:focus-visible .product-overlay { opacity: 1; transform: translateY(0); }
 .product-body { padding: 16px 18px 20px; }
 .product-summary {
   font-size: 13.5px;
@@ -726,7 +776,9 @@ a { color: inherit; }
   .topbar-search { order: 3; flex-basis: 100%; max-width: none; }
   .category-strip { padding: 10px 20px; }
   .search-box { padding: 22px; }
-  .collection, .process, .site-footer, .breadcrumb, .related { padding-left: 24px; padding-right: 24px; }
+  .collection, .process, .site-footer, .breadcrumb, .related, .trust-strip { padding-left: 24px; padding-right: 24px; }
+  .trust-strip { grid-template-columns: repeat(2, 1fr); row-gap: 20px; }
+  .trust-item:nth-child(3) { border-left: none; }
   .detail { grid-template-columns: 1fr; padding: 24px 24px 60px; gap: 28px; }
   .detail-image { aspect-ratio: 4 / 3; }
   .process-steps { grid-template-columns: 1fr; gap: 24px; }

@@ -59,8 +59,11 @@ function productCardHtml(p) {
     : `${p.sources.length} source${p.sources.length === 1 ? "" : "s"} · ${formatDate(p.created_at)}`;
   return `
     <div class="product-card" data-id="${p.id}" tabindex="0" role="button" aria-label="View design">
-      ${badge}
-      <img src="${p.mockups.front}" alt="" loading="lazy" />
+      <div class="product-media">
+        ${badge}
+        <img src="${p.mockups.front}" alt="" loading="lazy" />
+        <div class="product-overlay">Quick view</div>
+      </div>
       <div class="product-body">
         <p class="product-summary">${escapeHtml(p.trend_summary)}</p>
         <p class="product-meta">${meta}</p>

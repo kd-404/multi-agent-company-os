@@ -28,7 +28,10 @@ function productCardHtml(p) {
   const meta = `${p.sources ? p.sources.length : 0} source${(p.sources || []).length === 1 ? "" : "s"} · ${formatDate(p.created_at)}`;
   return `
     <a class="product-card" href="/shop/design/${p.id}">
-      <img src="${p.mockups.front}" alt="" loading="lazy" />
+      <div class="product-media">
+        <img src="${p.mockups.front}" alt="" loading="lazy" />
+        <div class="product-overlay">Quick view</div>
+      </div>
       <div class="product-body">
         <p class="product-summary">${escapeHtml(p.trend_summary)}</p>
         <p class="product-meta">${meta}</p>
