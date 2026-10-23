@@ -64,7 +64,7 @@ class Design(Base):
 
 class MockupTemplate(Base):
     """
-    One row per camera angle ("front", "back", "side") - a blank, plain
+    One row per camera angle ("front", "back", "model") - a blank, plain
     white T-shirt product photo generated ONCE via the design agent's same
     image pipeline, then reused forever as the backdrop every approved
     design gets composited onto (see app/compositing.py).
@@ -77,7 +77,7 @@ class MockupTemplate(Base):
     __tablename__ = "mockup_templates"
 
     id = Column(Integer, primary_key=True, index=True)
-    slot = Column(String(20), unique=True, nullable=False)  # "front" | "back" | "side"
+    slot = Column(String(20), unique=True, nullable=False)  # "front" | "back" | "model"
     image_data = Column(LargeBinary, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

@@ -85,6 +85,15 @@ button:hover { opacity: 0.9; }
 #design-generate-btn:disabled { opacity: 0.6; cursor: wait; }
 #design-generate-status { color: #c0392b; }
 
+.batch-generate {
+  margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border);
+}
+#batch-generate-btn {
+  background: #6a4fb3; width: 100%;
+}
+#batch-generate-btn:disabled { opacity: 0.6; cursor: wait; }
+#batch-generate-status { color: #2e7d32; }
+
 .design-gallery {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 16px;
 }

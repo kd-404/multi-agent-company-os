@@ -27,7 +27,7 @@ from ..visual_search import (
 log = logging.getLogger(__name__)
 router = APIRouter()
 
-MOCKUP_SLOTS = ("front", "back", "side")
+MOCKUP_SLOTS = ("front", "back", "model")
 
 # Mockups don't change once a design is approved, so the browser (and any
 # CDN in front of this later) can hold onto them instead of re-fetching.

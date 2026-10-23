@@ -45,6 +45,22 @@ IMAGE_STYLE_SUFFIX = (
     "flat background."
 )
 
+# Deliberately varied style angles for batch generation, so a run of several
+# designs doesn't converge on the same "generic trendy graphic" look every
+# time Tavily happens to return similar search results. Each one still goes
+# through the same live trend-research step - this just points the research
+# at a different corner of the design world each time.
+BATCH_STYLE_PRESETS = [
+    "bold streetwear graffiti-style graphic with spray-paint texture",
+    "minimalist single continuous line-art illustration",
+    "Japanese ukiyo-e woodblock print inspired illustration",
+    "retro 90s skate culture graphic with distressed texture",
+    "geometric abstract pattern with bold color blocking",
+    "detailed botanical nature illustration with fine linework",
+    "psychedelic pattern with swirling trippy colors",
+    "vintage collegiate varsity typography design",
+]
+
 
 def _research_trend(query: str) -> tuple[str, list[str]]:
     """Calls Tavily directly; returns (written summary, source URLs)."""
@@ -71,19 +87,17 @@ def _research_trend(query: str) -> tuple[str, list[str]]:
     return summary, sources
 
 
-@router.post("/api/admin/design/generate")
-def generate_design(
-    focus: str = Form(default=""),  # optional: admin can narrow the trend search
-    db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
-):
-    query = focus.strip() or DEFAULT_TREND_QUERY
-
+def _generate_one_design(query: str, db: Session) -> dict:
+    """
+    The whole pipeline for one design: trend research -> image -> tagging ->
+    saved Design row. Shared by the single-design and batch endpoints so
+    they can't drift apart.
+    """
     try:
         summary, sources = _research_trend(query)
     except Exception as e:
         log.exception("Tavily trend research failed")
-        return {"status": "error", "stage": "trend_research", "detail": f"{type(e).__name__}: {e}"}
+        return {"status": "error", "stage": "trend_research", "detail": f"{type(e).__name__}: {e}", "query": query}
 
     image_prompt = f"{summary}{IMAGE_STYLE_SUFFIX}"
 
@@ -91,7 +105,7 @@ def generate_design(
         image_bytes = generate_image(image_prompt, size="1024x1024")
     except Exception as e:
         log.exception("Image generation failed")
-        return {"status": "error", "stage": "image_generation", "detail": f"{type(e).__name__}: {e}"}
+        return {"status": "error", "stage": "image_generation", "detail": f"{type(e).__name__}: {e}", "query": query}
 
     # Tagging/color extraction feeds visual search (see app/visual_search.py)
     # but isn't core to "did we get a design" - a Vision hiccup here
@@ -126,6 +140,41 @@ def generate_design(
         "trend_summary": summary,
         "sources": sources,
     }
+
+
+@router.post("/api/admin/design/generate")
+def generate_design(
+    focus: str = Form(default=""),  # optional: admin can narrow the trend search
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    query = focus.strip() or DEFAULT_TREND_QUERY
+    return _generate_one_design(query, db)
+
+
+MAX_BATCH_SIZE = 8
+
+
+@router.post("/api/admin/design/generate-batch")
+def generate_batch(
+    count: int = Form(default=MAX_BATCH_SIZE),
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    """
+    Runs several generations back to back, each pointed at a different style
+    preset (BATCH_STYLE_PRESETS) so the batch doesn't converge on one look.
+    Synchronous and can take a couple of minutes for a full batch of 8 -
+    the admin UI warns about this and shows a running count rather than a
+    single spinner.
+    """
+    count = max(1, min(count, MAX_BATCH_SIZE))
+    results = []
+    for i in range(count):
+        preset = BATCH_STYLE_PRESETS[i % len(BATCH_STYLE_PRESETS)]
+        query = f"{preset} — trending T-shirt graphic design right now"
+        results.append(_generate_one_design(query, db))
+    return {"results": results, "succeeded": sum(1 for r in results if r["status"] == "ok")}
 
 
 @router.get("/api/admin/design/list")

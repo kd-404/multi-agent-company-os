@@ -4,9 +4,10 @@ Mockup templates (one-time setup) + per-design mockup rendering.
 Flow:
   1. Admin clicks "Generate mockup templates" ONCE (generate_templates below).
      This calls the image model 3 times - plain, blank T-shirt product
-     photos: front, back, side - and saves them into the mockup_templates
-     table (see db.py). This never needs to run again unless an admin wants
-     fresh template photos.
+     photos: front (flat), back (flat), model (an invented, non-real
+     person wearing the plain shirt) - and saves them into the
+     mockup_templates table (see db.py). This never needs to run again
+     unless an admin wants fresh template photos.
   2. For any design, GET /api/admin/design/{id}/mockup/{slot} composites
      that design's image onto the matching template with Pillow - no AI
      call, pure image math (app/compositing.py) - and returns a PNG.
@@ -41,12 +42,15 @@ TEMPLATE_PROMPTS: dict[str, str] = {
         "wrinkles, no text, no logo, no printed graphic, no person, no mannequin, "
         "high resolution commercial catalog photo."
     ),
-    "side": (
-        "Professional e-commerce product photography: a completely blank plain "
-        "white crewneck T-shirt on a wooden hanger, photographed at a slight "
-        "three-quarter angle to show depth and side profile, light neutral gray "
-        "background, soft even studio lighting, no wrinkles, no text, no logo, no "
-        "printed graphic, no person, high resolution commercial catalog photo."
+    "model": (
+        "Professional fashion e-commerce photography: a young adult model with a "
+        "friendly, natural expression, standing confidently, three-quarter body "
+        "shot from the chest to the waist, wearing a completely plain, blank white "
+        "crewneck T-shirt with no text, no logo, no printed graphic on it, facing "
+        "the camera directly, soft even studio lighting, light neutral gray "
+        "background, authentic catalog-style pose, high resolution commercial "
+        "fashion photo. The model is an invented, generic person - not a real, "
+        "named, or identifiable individual."
     ),
 }
 

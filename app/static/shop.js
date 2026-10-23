@@ -143,9 +143,9 @@ function setupHero(product) {
   });
 }
 
-// --- Modal (front/back/side viewer) ---
+// --- Modal (front/back/model viewer) ---
 let activeProduct = null;
-const MOCKUP_SLOTS = ["front", "back", "side"];
+const MOCKUP_SLOTS = ["front", "back", "model"];
 
 function openModal(id) {
   const product = products.find((p) => p.id === id);

@@ -139,7 +139,7 @@ document.getElementById("create-admin-form").onsubmit = async (e) => {
 // --- Design agent ---
 const designGallery = document.getElementById("design-gallery");
 const designStatusEl = document.getElementById("design-generate-status");
-const MOCKUP_SLOTS = ["front", "back", "side"];
+const MOCKUP_SLOTS = ["front", "back", "model"];
 let mockupTemplatesReady = false;
 
 async function checkMockupTemplates() {
@@ -151,7 +151,7 @@ async function checkMockupTemplates() {
   mockupTemplatesReady = MOCKUP_SLOTS.every((slot) => status[slot] && status[slot].generated);
 
   if (mockupTemplatesReady) {
-    hint.textContent = "Mockup templates ready. Each approved design shows front/back/side previews below.";
+    hint.textContent = "Mockup templates ready. Each approved design shows front/back/model previews below.";
     btn.textContent = "Regenerate mockup templates";
     btn.classList.remove("hidden");
   } else {
@@ -235,6 +235,32 @@ async function reviewDesign(id, action) {
   await fetch(`/api/admin/design/${id}/${action}`, { method: "POST" });
   loadDesigns();
 }
+
+// --- Batch generation (varied styles) ---
+document.getElementById("batch-generate-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("batch-generate-btn");
+  const statusEl = document.getElementById("batch-generate-status");
+  btn.disabled = true;
+  btn.textContent = "Generating batch (this takes a few minutes)...";
+  statusEl.textContent = "";
+
+  try {
+    const form = new FormData();
+    form.append("count", "8");
+    const res = await fetch("/api/admin/design/generate-batch", { method: "POST", body: form });
+    const data = await res.json();
+    const failed = (data.results || []).filter((r) => r.status !== "ok");
+    statusEl.textContent = failed.length
+      ? `${data.succeeded} of ${data.results.length} generated. ${failed.length} failed (${failed.map((f) => f.stage).join(", ")}).`
+      : `${data.succeeded} designs generated.`;
+    loadDesigns();
+  } catch (e) {
+    statusEl.textContent = "Batch generation failed - check Log Stream.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Generate a batch of 8 (varied styles)";
+  }
+});
 
 // --- Customer interest (visual-search trend alerts) ---
 async function loadSearchTrends() {

@@ -9,10 +9,11 @@ mockup and is cheap, fast and deterministic.
 PRINT_AREAS below are first-guess coordinates (as fractions of the template
 image's width/height) for where the chest-print region sits in each
 template photo. They were picked to match the framing the template prompts
-ask for (flat-lay, centered, shot from directly above / slight angle for
-"side"), but the image model doesn't guarantee pixel-perfect framing every
-time it's asked to regenerate a template - if a design looks off-center or
-mis-sized once real templates exist, these are the numbers to nudge.
+ask for (flat-lay, centered, shot from directly above for "front"/"back";
+chest-to-waist, facing camera for "model"), but the image model doesn't
+guarantee pixel-perfect framing every time it's asked to regenerate a
+template - if a design looks off-center or mis-sized once real templates
+exist, these are the numbers to nudge (tracked as task #9).
 """
 from io import BytesIO
 
@@ -21,15 +22,11 @@ from PIL import Image, ImageChops, ImageFilter
 # (left, top, right, bottom) as fractions of template width/height.
 PRINT_AREAS: dict[str, tuple[float, float, float, float]] = {
     "front": (0.37, 0.27, 0.63, 0.50),
-    "side": (0.40, 0.30, 0.60, 0.48),
+    "model": (0.34, 0.20, 0.66, 0.45),
     # "back" has no print area - a design agent run only ever produces one
     # graphic, meant for the front; the back template stays a blank shirt,
     # same as a real single-sided print-on-demand listing.
 }
-
-# Horizontal shear applied to the design on the "side" angle shot, to
-# suggest the garment is turned rather than flat-on to the camera.
-SIDE_SHEAR = 0.15
 
 
 def _remove_background(design: Image.Image, threshold: int = 24) -> Image.Image:
@@ -110,14 +107,6 @@ def composite_mockup(template_bytes: bytes, design_bytes: bytes | None, slot: st
 
     template_region = template.crop((paste_x, paste_y, paste_x + fit_w, paste_y + fit_h))
     shaded = _shade_onto_fabric(design_rgba, template_region)
-
-    if slot == "side":
-        # Mild shear to suggest the garment is turned, not flat to camera.
-        shaded = shaded.transform(
-            shaded.size, Image.AFFINE,
-            (1, SIDE_SHEAR, -SIDE_SHEAR * shaded.height / 2, 0, 1, 0),
-            resample=Image.BICUBIC,
-        )
 
     template.alpha_composite(shaded, (paste_x, paste_y))
 
