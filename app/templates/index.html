@@ -114,6 +114,35 @@
           <p class="hint">When shoppers use "Find something like it" on the public site, repeated matches against the same design show up here &mdash; a signal worth reacting to, even without email alerts wired up yet.</p>
           <div id="interest-list"></div>
         </div>
+
+        <!-- Admin-only: live multi-agent status + full pipeline demo -->
+        <div class="panel hidden" id="agents-panel">
+          <h2>Agent Status</h2>
+          <p class="hint">Design, Marketing, Warehouse, Payment and the CEO agent, live &mdash; each card is that agent's own most recent activity, not a heartbeat. "Run full pipeline" fires a real pass through all five, in order, right now.</p>
+          <div id="agent-cards" class="agent-cards"></div>
+          <button type="button" id="run-demo-btn">Run full pipeline demo</button>
+          <p class="note" id="run-demo-status"></p>
+          <h3>Recent activity</h3>
+          <div id="agent-feed" class="agent-feed"></div>
+        </div>
+
+        <!-- Admin-only: Marketing Agent -->
+        <div class="panel hidden" id="marketing-panel">
+          <h2>Marketing Agent</h2>
+          <p class="hint">Trend radar checks live research against what's already in the catalog. Caption drafts are built from each design's own trend research and Vision tags &mdash; no extra AI call per design.</p>
+          <button type="button" id="scan-trends-btn">Scan for new trends</button>
+          <p class="note" id="scan-trends-status"></p>
+          <div id="marketing-list" class="marketing-list"></div>
+        </div>
+
+        <!-- Admin-only: Warehouse Agent -->
+        <div class="panel hidden" id="warehouse-panel">
+          <h2>Warehouse Agent</h2>
+          <p class="hint">Loomwell prints on demand, so "stock" is a simulated count the agent manages itself &mdash; it flags low stock + sustained interest on its own and recommends a reprint, the same way the CEO assistant answers a status question.</p>
+          <button type="button" id="warehouse-scan-btn">Run stock check</button>
+          <p class="note" id="warehouse-scan-status"></p>
+          <div id="warehouse-list" class="warehouse-list"></div>
+        </div>
       </main>
     </section>
   </div>

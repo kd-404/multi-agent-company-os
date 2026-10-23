@@ -59,10 +59,17 @@ async function enterDashboard() {
     document.getElementById("admin-panel").classList.remove("hidden");
     document.getElementById("design-panel").classList.remove("hidden");
     document.getElementById("interest-panel").classList.remove("hidden");
+    document.getElementById("agents-panel").classList.remove("hidden");
+    document.getElementById("marketing-panel").classList.remove("hidden");
+    document.getElementById("warehouse-panel").classList.remove("hidden");
     loadUsers();
     await checkMockupTemplates();
     loadDesigns();
     loadSearchTrends();
+    loadAgentStatus();
+    loadAgentFeed();
+    loadMarketingFeed();
+    loadWarehouseStatus();
   }
 
   loadChatHistory();
@@ -312,3 +319,194 @@ document.getElementById("design-generate-form").onsubmit = async (e) => {
     btn.textContent = "Generate new design";
   }
 };
+
+// --- Agent status + full pipeline demo ---
+const AGENT_LABELS = {
+  design: "Design",
+  marketing: "Marketing",
+  warehouse: "Warehouse",
+  payment: "Payment",
+  ceo: "CEO",
+};
+
+function timeAgo(iso) {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function agentCardHtml(entry) {
+  const label = AGENT_LABELS[entry.agent] || entry.agent;
+  if (!entry.latest) {
+    return `<div class="agent-card status-idle"><h4>${label}</h4><p class="agent-status-badge">idle</p><p class="agent-msg">No activity yet.</p></div>`;
+  }
+  const a = entry.latest;
+  return `
+    <div class="agent-card status-${a.status}">
+      <h4>${label}</h4>
+      <p class="agent-status-badge">${a.status}</p>
+      <p class="agent-msg">${escapeHtmlAdmin(a.message)}</p>
+      <p class="agent-time">${timeAgo(a.created_at)}</p>
+    </div>`;
+}
+
+function escapeHtmlAdmin(str) {
+  const div = document.createElement("div");
+  div.textContent = str || "";
+  return div.innerHTML;
+}
+
+async function loadAgentStatus() {
+  const res = await fetch("/api/admin/agents/status");
+  if (!res.ok) return;
+  const data = await res.json();
+  document.getElementById("agent-cards").innerHTML = data.map(agentCardHtml).join("");
+}
+
+async function loadAgentFeed() {
+  const res = await fetch("/api/admin/agents/feed");
+  if (!res.ok) return;
+  const rows = await res.json();
+  const el = document.getElementById("agent-feed");
+  if (rows.length === 0) {
+    el.innerHTML = '<p class="hint">No agent activity yet.</p>';
+    return;
+  }
+  el.innerHTML = rows.map((a) => `
+    <div class="feed-row status-${a.status}">
+      <span class="feed-agent">${AGENT_LABELS[a.agent] || a.agent}</span>
+      <span class="feed-msg">${escapeHtmlAdmin(a.message)}</span>
+      <span class="feed-time">${timeAgo(a.created_at)}</span>
+    </div>`).join("");
+}
+
+document.getElementById("run-demo-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("run-demo-btn");
+  const statusEl = document.getElementById("run-demo-status");
+  btn.disabled = true;
+  btn.textContent = "Running pipeline...";
+  statusEl.textContent = "Kicking off CEO → Design → Marketing → Payment → Warehouse...";
+  try {
+    const res = await fetch("/api/admin/agents/run-demo", { method: "POST" });
+    const data = await res.json();
+    statusEl.textContent = data.ok
+      ? `Pipeline run complete (${data.steps.length} steps) — design #${data.design_id} went through the full flow.`
+      : "Pipeline run stopped early - see the feed below.";
+    await Promise.all([loadAgentStatus(), loadAgentFeed(), loadDesigns(), loadMarketingFeed(), loadWarehouseStatus()]);
+  } catch (e) {
+    statusEl.textContent = "Pipeline run failed - check Log Stream.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Run full pipeline demo";
+  }
+});
+
+// --- Marketing agent ---
+async function loadMarketingFeed() {
+  const res = await fetch("/api/admin/marketing/feed");
+  if (!res.ok) return;
+  const designs = await res.json();
+  const el = document.getElementById("marketing-list");
+  if (designs.length === 0) {
+    el.innerHTML = '<p class="hint">No approved designs yet - approve one in the Design Agent panel first.</p>';
+    return;
+  }
+  el.innerHTML = designs.map((d) => `
+    <div class="marketing-row">
+      <img src="${d.image_url}" alt="" loading="lazy" />
+      <div class="marketing-body">
+        <p class="marketing-summary">${escapeHtmlAdmin(d.trend_summary)}</p>
+        ${d.caption
+          ? `<p class="marketing-caption">${escapeHtmlAdmin(d.caption)}</p><p class="marketing-hashtags">${escapeHtmlAdmin(d.hashtags || "")}</p>`
+          : `<button type="button" class="draft-caption-btn" data-id="${d.id}">Draft caption</button>`}
+      </div>
+    </div>`).join("");
+  el.querySelectorAll(".draft-caption-btn").forEach((b) => {
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      b.textContent = "Drafting...";
+      await fetch(`/api/admin/marketing/draft/${b.dataset.id}`, { method: "POST" });
+      loadMarketingFeed();
+      loadAgentStatus();
+      loadAgentFeed();
+    });
+  });
+}
+
+document.getElementById("scan-trends-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("scan-trends-btn");
+  const statusEl = document.getElementById("scan-trends-status");
+  btn.disabled = true;
+  btn.textContent = "Scanning...";
+  try {
+    const res = await fetch("/api/admin/marketing/scan-trends", { method: "POST" });
+    const data = await res.json();
+    statusEl.textContent = data.flagged
+      ? `New trend not yet in the catalog (best overlap ${Math.round(data.best_overlap * 100)}%): ${data.summary}`
+      : `Catalog already covers current trends (best overlap ${Math.round(data.best_overlap * 100)}%).`;
+    loadAgentStatus();
+    loadAgentFeed();
+  } catch (e) {
+    statusEl.textContent = "Trend scan failed - check Log Stream.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Scan for new trends";
+  }
+});
+
+// --- Warehouse agent ---
+async function loadWarehouseStatus() {
+  const res = await fetch("/api/admin/warehouse/status");
+  if (!res.ok) return;
+  const rows = await res.json();
+  const el = document.getElementById("warehouse-list");
+  if (rows.length === 0) {
+    el.innerHTML = '<p class="hint">No approved designs yet.</p>';
+    return;
+  }
+  el.innerHTML = rows.map((r) => `
+    <div class="warehouse-row ${r.recommend_reprint ? "recommend" : ""}">
+      <img src="${r.image_url}" alt="" loading="lazy" />
+      <div class="warehouse-body">
+        <p class="warehouse-summary">${escapeHtmlAdmin(r.trend_summary)}</p>
+        <p class="warehouse-stats">${r.virtual_stock} in stock &middot; ${r.interest_7d} searches (7d)${r.recommend_reprint ? " &middot; <strong>recommend reprint</strong>" : ""}</p>
+      </div>
+      <button type="button" class="restock-btn" data-id="${r.id}">Restock +50</button>
+    </div>`).join("");
+  el.querySelectorAll(".restock-btn").forEach((b) => {
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      const form = new FormData();
+      form.append("qty", "50");
+      await fetch(`/api/admin/warehouse/restock/${b.dataset.id}`, { method: "POST", body: form });
+      loadWarehouseStatus();
+      loadAgentStatus();
+      loadAgentFeed();
+    });
+  });
+}
+
+document.getElementById("warehouse-scan-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("warehouse-scan-btn");
+  const statusEl = document.getElementById("warehouse-scan-status");
+  btn.disabled = true;
+  btn.textContent = "Checking...";
+  try {
+    const res = await fetch("/api/admin/warehouse/scan", { method: "POST" });
+    const data = await res.json();
+    statusEl.textContent = data.flagged.length
+      ? `${data.flagged.length} design(s) recommended for reprint.`
+      : `Checked ${data.checked} design(s) - stock healthy.`;
+    loadAgentStatus();
+    loadAgentFeed();
+  } catch (e) {
+    statusEl.textContent = "Stock check failed - check Log Stream.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Run stock check";
+  }
+});

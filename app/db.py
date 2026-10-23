@@ -61,6 +61,22 @@ class Design(Base):
     dominant_color = Column(String(20), nullable=True)        # "r,g,b" of the design itself, background excluded
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+    # --- Warehouse agent fields ---
+    # Loomwell prints on demand - there's no physical warehouse yet - so
+    # this is a SIMULATED stock count the warehouse agent manages: it starts
+    # full on approval and is decremented on each (currently simulated)
+    # sale, so the low-stock/reprint-recommendation logic has something
+    # real to react to. Swap in real inventory numbers later without
+    # changing the warehouse agent's logic.
+    virtual_stock = Column(Integer, nullable=False, default=50)
+
+    # --- Marketing agent fields ---
+    # Drafted once per design by the marketing agent (rule-based, from the
+    # same trend research + Vision tags already on this row - no extra AI
+    # call needed). Null until "Draft caption" has been run for this design.
+    social_caption = Column(Text, nullable=True)
+    social_hashtags = Column(String(400), nullable=True)
+
 
 class MockupTemplate(Base):
     """
@@ -97,6 +113,29 @@ class SearchLog(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class AgentActivity(Base):
+    """
+    One row per notable thing an agent did - the shared feed behind the
+    admin "Agent Status" live dashboard and the "Run full pipeline" demo.
+    Written by app/agent_log.py's log_activity(), called from every agent
+    (design, marketing, warehouse, payment, ceo) at the point it actually
+    does something, not on a timer - so "latest activity per agent" is a
+    real status, not a heartbeat.
+
+    agent: "design" | "marketing" | "warehouse" | "payment" | "ceo"
+    status: "ok" | "alert" | "error" | "simulated" (payment only, until
+            Razorpay is wired up for real - never claims a real charge)
+    """
+    __tablename__ = "agent_activities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    agent = Column(String(20), nullable=False, index=True)
+    status = Column(String(20), nullable=False)
+    message = Column(Text, nullable=False)
+    design_id = Column(Integer, nullable=True, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
     _run_lightweight_migrations()
@@ -122,6 +161,9 @@ def _run_lightweight_migrations():
         "image_hash": "VARCHAR(70)",
         "vision_tags": "TEXT",
         "dominant_color": "VARCHAR(20)",
+        "virtual_stock": "INTEGER NOT NULL DEFAULT 50",
+        "social_caption": "TEXT",
+        "social_hashtags": "VARCHAR(400)",
     }
     is_postgres = engine.dialect.name == "postgresql"
     with engine.begin() as conn:
@@ -133,6 +175,8 @@ def _run_lightweight_migrations():
             else:
                 # SQLite (local dev fallback) has no "IF NOT EXISTS" for
                 # ADD COLUMN, but we've already filtered to missing columns.
+                # SQLite also rejects a non-constant DEFAULT/NOT NULL combo
+                # less strictly than Postgres, so this still works as-is.
                 conn.execute(text(f"ALTER TABLE designs ADD COLUMN {col_name} {col_type}"))
 
 

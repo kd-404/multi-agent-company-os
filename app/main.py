@@ -16,6 +16,10 @@ from .routes import (
     design_routes,
     mockup_routes,
     public_routes,
+    marketing_routes,
+    warehouse_routes,
+    payment_routes,
+    agents_routes,
 )
 
 
@@ -46,6 +50,10 @@ app.include_router(vision_routes.router)
 app.include_router(design_routes.router)
 app.include_router(mockup_routes.router)
 app.include_router(public_routes.router)
+app.include_router(marketing_routes.router)
+app.include_router(warehouse_routes.router)
+app.include_router(payment_routes.router)
+app.include_router(agents_routes.router)
 
 
 @app.on_event("startup")

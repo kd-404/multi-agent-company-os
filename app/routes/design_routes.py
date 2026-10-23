@@ -21,15 +21,15 @@ Foundry agent beyond the image deployment itself.
 import logging
 from datetime import datetime, timedelta, timezone
 
-import httpx
 from fastapi import APIRouter, Depends, Form, HTTPException, Response
 from sqlalchemy.orm import Session
 
-from ..config import settings
 from ..db import get_db, Design, SearchLog, User
 from ..auth import require_admin
 from ..image_client import generate_image
 from ..visual_search import extract_signals, tags_to_text, color_to_text
+from ..trend_research import research_trend
+from ..agent_log import log_activity
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -62,41 +62,20 @@ BATCH_STYLE_PRESETS = [
 ]
 
 
-def _research_trend(query: str) -> tuple[str, list[str]]:
-    """Calls Tavily directly; returns (written summary, source URLs)."""
-    resp = httpx.post(
-        "https://api.tavily.com/search",
-        headers={"Authorization": f"Bearer {settings.TAVILY_API_KEY}"},
-        json={
-            "query": query,
-            "search_depth": "advanced",
-            "max_results": 5,
-            "topic": "general",
-            "include_answer": "advanced",
-        },
-        timeout=30.0,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    summary = data.get("answer") or ""
-    if not summary:
-        # Fall back to stitching result snippets together if Tavily didn't
-        # return a synthesized answer for some reason.
-        summary = " ".join(r.get("content", "") for r in data.get("results", [])[:3])
-    sources = [r["url"] for r in data.get("results", []) if r.get("url")]
-    return summary, sources
-
-
 def _generate_one_design(query: str, db: Session) -> dict:
     """
     The whole pipeline for one design: trend research -> image -> tagging ->
-    saved Design row. Shared by the single-design and batch endpoints so
-    they can't drift apart.
+    saved Design row. Shared by the single-design, batch, and agent-demo
+    endpoints so they can't drift apart. Every call reports to the
+    Design agent's activity feed (app/agent_log.py), success or failure,
+    so the admin "Agent Status" dashboard reflects real runs, not just
+    the pipeline demo.
     """
     try:
-        summary, sources = _research_trend(query)
+        summary, sources = research_trend(query)
     except Exception as e:
         log.exception("Tavily trend research failed")
+        log_activity(db, "design", "error", f"Trend research failed: {type(e).__name__}: {e}")
         return {"status": "error", "stage": "trend_research", "detail": f"{type(e).__name__}: {e}", "query": query}
 
     image_prompt = f"{summary}{IMAGE_STYLE_SUFFIX}"
@@ -105,6 +84,7 @@ def _generate_one_design(query: str, db: Session) -> dict:
         image_bytes = generate_image(image_prompt, size="1024x1024")
     except Exception as e:
         log.exception("Image generation failed")
+        log_activity(db, "design", "error", f"Image generation failed: {type(e).__name__}: {e}")
         return {"status": "error", "stage": "image_generation", "detail": f"{type(e).__name__}: {e}", "query": query}
 
     # Tagging/color extraction feeds visual search (see app/visual_search.py)
@@ -132,6 +112,8 @@ def _generate_one_design(query: str, db: Session) -> dict:
     db.add(design)
     db.commit()
     db.refresh(design)
+
+    log_activity(db, "design", "ok", f"Generated design #{design.id} from live trend research.", design_id=design.id)
 
     return {
         "status": "ok",
