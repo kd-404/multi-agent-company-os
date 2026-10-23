@@ -301,8 +301,12 @@ document.getElementById("design-generate-form").onsubmit = async (e) => {
   btn.textContent = "Researching trends & generating...";
   designStatusEl.textContent = "";
 
+  // Always append "focus", even empty - an entirely empty multipart body
+  // (zero fields) trips Starlette's form parser ("There was an error
+  // parsing the body"), which is what was happening whenever this box
+  // was left blank. The backend already treats "" the same as omitted.
   const form = new FormData();
-  if (focus) form.append("focus", focus);
+  form.append("focus", focus);
 
   try {
     const res = await fetch("/api/admin/design/generate", { method: "POST", body: form });
