@@ -169,6 +169,7 @@ function openModal(id) {
   activeProduct = product;
 
   document.getElementById("modal-summary").textContent = product.trend_summary;
+  document.getElementById("modal-detail-link").href = `/shop/design/${product.id}`;
   const sourcesEl = document.getElementById("modal-sources");
   sourcesEl.innerHTML = product.sources.length
     ? "Sourced from " + product.sources.slice(0, 4).map((s) => {

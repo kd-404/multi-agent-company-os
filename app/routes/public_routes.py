@@ -54,6 +54,23 @@ def list_products(db: Session = Depends(get_db)):
     ]
 
 
+@router.get("/api/public/products/{design_id}")
+def get_product(design_id: int, db: Session = Depends(get_db)):
+    """Single approved design, for the dedicated /shop/design/{id} page."""
+    d = db.query(Design).filter(Design.id == design_id, Design.status == "approved").first()
+    if not d:
+        raise HTTPException(status_code=404, detail="Design not found")
+    return {
+        "id": d.id,
+        "trend_summary": d.trend_summary,
+        "sources": d.sources.split("\n") if d.sources else [],
+        "mockups": {slot: f"/api/public/design/{d.id}/mockup/{slot}" for slot in MOCKUP_SLOTS},
+        "caption": d.social_caption,
+        "hashtags": d.social_hashtags,
+        "created_at": d.created_at.isoformat(),
+    }
+
+
 @router.get("/api/public/design/{design_id}/mockup/{slot}")
 def public_design_mockup(design_id: int, slot: str, db: Session = Depends(get_db)):
     if slot not in MOCKUP_SLOTS:

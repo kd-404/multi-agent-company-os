@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Loomwell — design</title>
+<meta name="description" content="A Loomwell design, researched from live trend data by an AI design agent and reviewed by a human before printing." />
+<link rel="preconnect" href="https://api.fontshare.com" />
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=general-sans@400,500,600&display=swap" />
+<link rel="stylesheet" href="/static/shop.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <a href="/shop" class="wordmark">Loomwell</a>
+
+    <form class="topbar-search" id="topbar-search-form">
+      <input type="text" id="topbar-search-input" placeholder="Search designs — try &quot;floral&quot;, &quot;retro&quot;, &quot;minimalist&quot;&hellip;" aria-label="Search the collection" />
+      <button type="submit" aria-label="Search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </form>
+
+    <div class="topbar-actions">
+      <button type="button" class="account-corner" id="account-corner">
+        <span class="account-line-1" id="account-line-1">Hello, sign in</span>
+        <span class="account-line-2">Account</span>
+      </button>
+      <button type="button" class="cart-corner" id="cart-corner">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        <span class="cart-label">Cart</span>
+        <div class="cart-popover" id="cart-popover" hidden>Checkout is coming soon — the collection is browsable, not yet purchasable.</div>
+      </button>
+      <a href="/" class="nav-admin">Admin</a>
+    </div>
+  </header>
+
+  <nav class="category-strip">
+    <a href="/shop#collection" class="category-chip">All</a>
+    <a href="/shop#collection" class="category-chip">T-Shirts</a>
+    <span class="category-chip disabled">Pants <em>Soon</em></span>
+    <a href="/shop#search" class="category-chip">Find by photo</a>
+    <a href="/shop#process" class="category-chip">How it's made</a>
+  </nav>
+
+  <main>
+    <div class="breadcrumb">
+      <a href="/shop">&larr; Back to the collection</a>
+    </div>
+
+    <section class="detail" id="detail">
+      <div class="detail-gallery">
+        <img id="detail-image" class="detail-image" alt="" />
+        <div class="modal-tabs" id="detail-tabs"></div>
+      </div>
+      <div class="detail-info">
+        <p class="detail-eyebrow">Loomwell original</p>
+        <h1 id="detail-title" class="detail-title">Loading&hellip;</h1>
+        <p class="detail-sources" id="detail-sources"></p>
+
+        <div class="detail-caption hidden" id="detail-caption">
+          <p id="detail-caption-text"></p>
+          <p class="detail-hashtags" id="detail-hashtags"></p>
+        </div>
+
+        <a href="/shop#search" class="cta">Find something like it</a>
+        <p class="detail-note">Checkout is coming soon &mdash; the collection is browsable, not yet purchasable.</p>
+      </div>
+    </section>
+
+    <section class="related" id="related">
+      <div class="collection-head">
+        <h2>More from the collection</h2>
+      </div>
+      <div class="grid" id="related-grid"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <p class="footer-heading">Loomwell</p>
+        <a href="/shop#collection">The collection</a>
+        <a href="/shop#search">Find by photo</a>
+        <a href="/shop#process">How it's made</a>
+      </div>
+      <div class="footer-col">
+        <p class="footer-heading">Account</p>
+        <button type="button" class="footer-link-btn" id="footer-account-btn">Sign in / Create account</button>
+        <a href="/">Admin dashboard</a>
+      </div>
+    </div>
+    <p class="footer-bottom">Loomwell — designed by AI agents, approved by a human.</p>
+  </footer>
+
+  <div class="modal-backdrop" id="account-backdrop" hidden>
+    <div class="modal account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
+      <button class="modal-close" id="account-modal-close" aria-label="Close">&times;</button>
+      <div class="account-modal-body">
+        <h3 id="account-modal-title">Account</h3>
+
+        <div class="account-signed-in hidden" id="account-signed-in">
+          <p>Signed in as <strong id="account-email"></strong>.</p>
+          <button type="button" id="account-sign-out">Sign out</button>
+        </div>
+
+        <div id="account-signed-out">
+          <div class="tabs">
+            <button type="button" id="account-tab-login" class="tab active">Sign in</button>
+            <button type="button" id="account-tab-register" class="tab">Create account</button>
+          </div>
+
+          <form id="account-login-form">
+            <input type="email" name="email" placeholder="Email" required />
+            <input type="password" name="password" placeholder="Password" required />
+            <button type="submit">Sign in</button>
+            <p class="error" id="account-login-error"></p>
+          </form>
+
+          <form id="account-register-form" class="hidden">
+            <input type="email" name="email" placeholder="Email" required />
+            <input type="password" name="password" placeholder="Password" required />
+            <button type="submit">Create account</button>
+            <p class="error" id="account-register-error"></p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cookie-banner" id="cookie-banner" hidden>
+    <p>Loomwell uses a small cookie to remember your session and site preferences. No ads, no tracking.</p>
+    <div class="cookie-actions">
+      <button id="cookie-decline" class="cookie-decline">Decline</button>
+      <button id="cookie-accept" class="cookie-accept">Accept</button>
+    </div>
+  </div>
+
+  <script>window.LOOMWELL_DESIGN_ID = {{ design_id }};</script>
+  <script src="/static/shop_design.js"></script>
+</body>
+</html>

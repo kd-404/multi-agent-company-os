@@ -72,6 +72,12 @@ def shop(request: Request):
     return templates.TemplateResponse("shop.html", {"request": request})
 
 
+@app.get("/shop/design/{design_id}", response_class=HTMLResponse)
+def shop_design(design_id: int, request: Request):
+    """One design's own page - detail view, not just the quick-look modal."""
+    return templates.TemplateResponse("shop_design.html", {"request": request, "design_id": design_id})
+
+
 @app.get("/health")
 def health():
     """App Service / Front Door health probe target."""
