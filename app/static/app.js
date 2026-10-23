@@ -155,7 +155,7 @@ async function checkMockupTemplates() {
     btn.textContent = "Regenerate mockup templates";
     btn.classList.remove("hidden");
   } else {
-    hint.textContent = "Generate the blank T-shirt template photos once, so designs can be previewed on a shirt (front/back/side).";
+    hint.textContent = "Generate the blank T-shirt template photos once, so designs can be previewed on a shirt (front/back/model).";
     btn.classList.remove("hidden");
   }
 }
