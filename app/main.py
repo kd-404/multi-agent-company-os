@@ -1,3 +1,5 @@
+import time
+
 from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -27,8 +29,16 @@ class CachedStaticFiles(StaticFiles):
     """
     Static assets (CSS/JS/fonts) don't change between requests within a
     deploy, so tell the browser to hold onto them instead of re-fetching on
-    every page view. A new deploy gets a new container anyway, so there's no
-    stale-cache risk worth a cache-busting scheme here.
+    every page view - aggressively (1 hour), since every <link>/<script>
+    reference now carries ?v=ASSET_VERSION (below), which changes every
+    time this process (re)starts. That means a browser that already has
+    the OLD url?v=... cached keeps using its (correct, matching) cached
+    copy, while the new deploy's HTML points at a NEW url?v=..., which the
+    browser has never seen and has to fetch fresh. Without this, a
+    visitor who loaded the site before a CSS/JS change can keep serving
+    the stale file straight from disk cache for up to an hour after a
+    redeploy, with no request to this server at all - which is exactly
+    what happened the first time this site was redesigned.
     """
     def file_response(self, *args, **kwargs):
         response = super().file_response(*args, **kwargs)
@@ -36,12 +46,18 @@ class CachedStaticFiles(StaticFiles):
         return response
 
 
+# Changes every time this process starts (every deploy/restart recycles
+# the container), so it's a free, zero-config cache-busting token - see
+# CachedStaticFiles above.
+ASSET_VERSION = str(int(time.time()))
+
 app = FastAPI(title="Loomwell")
 
 app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 
 app.mount("/static", CachedStaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["asset_version"] = ASSET_VERSION
 
 app.include_router(auth_routes.router)
 app.include_router(admin_routes.router)

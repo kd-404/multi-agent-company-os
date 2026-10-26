@@ -7,7 +7,7 @@
 <meta name="description" content="A Loomwell design, researched from live trend data by an AI design agent and reviewed by a human before printing." />
 <link rel="preconnect" href="https://api.fontshare.com" />
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=general-sans@400,500,600&display=swap" />
-<link rel="stylesheet" href="/static/shop.css" />
+<link rel="stylesheet" href="/static/shop.css?v={{ asset_version }}" />
 </head>
 <body>
 
@@ -141,6 +141,6 @@
 
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>window.LOOMWELL_DESIGN_ID = {{ design_id }};</script>
-  <script src="/static/shop_design.js"></script>
+  <script src="/static/shop_design.js?v={{ asset_version }}"></script>
 </body>
 </html>
