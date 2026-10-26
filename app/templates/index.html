@@ -59,6 +59,10 @@
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.5-6.3 4.5 2.3-7.2-6-4.6h7.6z"/></svg>
               Design Studio
             </a>
+            <a href="#eval-panel" class="sidebar-link hidden" data-target="eval-panel">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg>
+              Evaluation
+            </a>
             <a href="#marketing-panel" class="sidebar-link hidden" data-target="marketing-panel">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-7-7 18-2.5-7.5L3 11z"/></svg>
               Marketing
@@ -155,6 +159,17 @@
               </div>
 
               <div id="design-gallery" class="design-gallery"></div>
+            </div>
+
+            <!-- Admin-only: Evaluation layer / performance dashboard -->
+            <div class="panel hidden" id="eval-panel">
+              <h2>Evaluation</h2>
+              <p class="hint">Every Design agent run is scored, not just logged: per-stage success rate and latency, plus a relevance score checking whether the finished image's own Vision tags actually ground back in the trend brief that was supposed to produce it. This is the lean stand-in for a Foundry evaluator + Application Insights setup &mdash; same (stage, metric, value) shape, swappable later with no dashboard change.</p>
+              <div id="eval-stage-cards" class="eval-stage-cards"></div>
+              <h3>Relevance score over iterations</h3>
+              <p class="hint">How grounded each generated design's Vision tags are in its own trend-research brief (0&ndash;100), across the last 30 runs. A pipeline that's "succeeding" but drifting off-brief shows up here even when every call returns 200.</p>
+              <canvas id="eval-relevance-chart" width="640" height="160"></canvas>
+              <p class="note" id="eval-empty-note"></p>
             </div>
 
             <!-- Admin-only: Marketing Agent -->

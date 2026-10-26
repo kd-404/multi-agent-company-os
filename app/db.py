@@ -173,6 +173,36 @@ class AgentActivity(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class EvalMetric(Base):
+    """
+    One row per scored stage of a Design-agent pipeline run - the
+    evaluation layer behind the admin "Evaluation" dashboard. Every
+    _generate_one_design() call writes one row per stage it attempts, win
+    or lose, so the dashboard can show real success-rate/latency/quality
+    trends across runs, not just the latest one.
+
+    stage: "trend_research" | "image_generation" | "vision_tagging" | "overall"
+    metric: "latency_ms" | "success" (1/0) | "relevance_score" (0-100, see
+            app/evaluation.py - a stand-in for a Foundry groundedness/
+            relevance evaluator: how much the Vision tags on the finished
+            image actually overlap with the trend-research brief that
+            prompted it, i.e. did the image agent actually listen to the
+            research, or just generate something generic)
+    run_seq: 1-based index of this design's generation among all designs
+             generated so far, so "performance over iterations" has a
+             stable x-axis independent of wall-clock gaps between runs.
+    """
+    __tablename__ = "eval_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    design_id = Column(Integer, nullable=True, index=True)
+    run_seq = Column(Integer, nullable=False, index=True)
+    stage = Column(String(30), nullable=False, index=True)
+    metric = Column(String(30), nullable=False, index=True)
+    value = Column(Integer, nullable=False)  # ints only: ms, 0/1, or 0-100 score
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
     _run_lightweight_migrations()

@@ -56,7 +56,7 @@ async function enterDashboard() {
   dashboardScreen.classList.remove("hidden");
 
   if (me.role === "admin") {
-    ["admin-panel", "design-panel", "interest-panel", "agents-panel", "marketing-panel", "warehouse-panel"].forEach((id) => {
+    ["admin-panel", "design-panel", "interest-panel", "agents-panel", "marketing-panel", "warehouse-panel", "eval-panel"].forEach((id) => {
       document.getElementById(id).classList.remove("hidden");
     });
     document.querySelectorAll(".sidebar-link[data-target]").forEach((a) => a.classList.remove("hidden"));
@@ -69,6 +69,7 @@ async function enterDashboard() {
     loadMarketingFeed();
     loadWarehouseStatus();
     loadStatRow();
+    loadEvalDashboard();
   }
 
   loadChatHistory();
@@ -647,3 +648,78 @@ document.getElementById("warehouse-scan-btn").addEventListener("click", async ()
     btn.textContent = "Run stock check";
   }
 });
+
+// --- Evaluation dashboard (app/evaluation.py) ---
+async function loadEvalDashboard() {
+  const res = await fetch("/api/admin/evals/summary");
+  if (!res.ok) return;
+  const data = await res.json();
+
+  const cardsEl = document.getElementById("eval-stage-cards");
+  const emptyNote = document.getElementById("eval-empty-note");
+
+  if (!data.runs) {
+    cardsEl.innerHTML = "";
+    emptyNote.textContent = "No generation runs scored yet - generate a design to see eval data.";
+    drawRelevanceChart([]);
+    return;
+  }
+  emptyNote.textContent = "";
+
+  const STAGE_LABELS = { trend_research: "Trend Research", image_generation: "Image Generation", vision_tagging: "Vision Tagging" };
+  cardsEl.innerHTML = Object.entries(data.stages).map(([stage, s]) => `
+    <div class="eval-stage-card">
+      <p class="eval-stage-name">${STAGE_LABELS[stage] || stage}</p>
+      <p class="eval-stage-metric"><strong>${s.success_rate_pct}%</strong> success</p>
+      <p class="eval-stage-metric">${s.avg_latency_ms.toLocaleString()} ms avg</p>
+      <p class="eval-stage-metric eval-stage-attempts">${s.attempts} attempt${s.attempts === 1 ? "" : "s"}</p>
+    </div>
+  `).join("");
+
+  drawRelevanceChart(data.relevance_trend);
+}
+
+function drawRelevanceChart(points) {
+  const canvas = document.getElementById("eval-relevance-chart");
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Axis
+  ctx.strokeStyle = "#dde3ee";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(30, 10); ctx.lineTo(30, h - 20); ctx.lineTo(w - 10, h - 20);
+  ctx.stroke();
+  ctx.fillStyle = "#8a93a6";
+  ctx.font = "10px sans-serif";
+  ctx.fillText("100", 4, 14);
+  ctx.fillText("0", 14, h - 16);
+
+  if (!points.length) {
+    ctx.fillStyle = "#8a93a6";
+    ctx.fillText("No scored runs yet", w / 2 - 40, h / 2);
+    return;
+  }
+
+  const plotW = w - 40, plotH = h - 30;
+  const stepX = points.length > 1 ? plotW / (points.length - 1) : 0;
+  const toXY = (i, score) => [30 + i * stepX, 10 + plotH * (1 - score / 100)];
+
+  ctx.strokeStyle = "#6a4fb3";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const [x, y] = toXY(i, p.score);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  ctx.fillStyle = "#6a4fb3";
+  points.forEach((p, i) => {
+    const [x, y] = toXY(i, p.score);
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}

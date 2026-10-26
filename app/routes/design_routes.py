@@ -31,6 +31,7 @@ from ..visual_search import extract_signals, tags_to_text, color_to_text
 from ..trend_research import research_trend
 from ..agent_log import log_activity
 from ..garments import pick_garment_and_color, garment_label, color_label, GARMENTS, COLORS
+from ..evaluation import next_run_seq, timed_stage, record_metric, relevance_score, summarize as eval_summarize
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -70,35 +71,51 @@ def _generate_one_design(query: str, db: Session, forced_garment: str | None = N
     endpoints so they can't drift apart. Every call reports to the
     Design agent's activity feed (app/agent_log.py), success or failure,
     so the admin "Agent Status" dashboard reflects real runs, not just
-    the pipeline demo.
+    the pipeline demo - and to the evaluation layer (app/evaluation.py),
+    which is what the admin "Evaluation" dashboard reads for per-stage
+    success rate, latency, and the trend-research/image relevance score,
+    across runs rather than just the latest one.
     """
+    run_seq = next_run_seq(db)
+
     try:
-        summary, sources = research_trend(query)
+        with timed_stage(db, run_seq, "trend_research"):
+            summary, sources = research_trend(query)
     except Exception as e:
         log.exception("Tavily trend research failed")
         log_activity(db, "design", "error", f"Trend research failed: {type(e).__name__}: {e}")
+        record_metric(db, run_seq, "overall", "success", 0)
         return {"status": "error", "stage": "trend_research", "detail": f"{type(e).__name__}: {e}", "query": query}
 
     image_prompt = f"{summary}{IMAGE_STYLE_SUFFIX}"
 
     try:
-        image_bytes = generate_image(image_prompt, size="1024x1024")
+        with timed_stage(db, run_seq, "image_generation"):
+            image_bytes = generate_image(image_prompt, size="1024x1024")
     except Exception as e:
         log.exception("Image generation failed")
         log_activity(db, "design", "error", f"Image generation failed: {type(e).__name__}: {e}")
+        record_metric(db, run_seq, "overall", "success", 0)
         return {"status": "error", "stage": "image_generation", "detail": f"{type(e).__name__}: {e}", "query": query}
 
     # Tagging/color extraction feeds visual search (see app/visual_search.py)
     # but isn't core to "did we get a design" - a Vision hiccup here
     # shouldn't fail the whole generation. Falls back to untagged; a design
     # with no tags yet gets backfilled lazily on first search.
-    vision_tags_text, dominant_color_text = None, None
+    vision_tags_text, dominant_color_text, tags = None, None, []
     try:
-        tags, color = extract_signals(image_bytes)
-        vision_tags_text, dominant_color_text = tags_to_text(tags), color_to_text(color)
+        with timed_stage(db, run_seq, "vision_tagging"):
+            tags, color = extract_signals(image_bytes)
+            vision_tags_text, dominant_color_text = tags_to_text(tags), color_to_text(color)
         log.info("Vision tagging OK for new design: tags=%s color=%s", tags, color)
     except Exception:
         log.exception("Vision tagging FAILED for new design (non-fatal, will backfill on search)")
+
+    # Groundedness/relevance stand-in (see app/evaluation.py): did the
+    # finished image's own Vision tags actually relate to the trend brief
+    # that was supposed to produce it, or did the pipeline drift off-brief
+    # while still technically "succeeding"?
+    record_metric(db, run_seq, "overall", "relevance_score", relevance_score(summary, tags))
 
     # Mixed product matrix (see app/garments.py): every design lands on a
     # different garment type, and a color picked to contrast with the
@@ -125,6 +142,8 @@ def _generate_one_design(query: str, db: Session, forced_garment: str | None = N
     db.add(design)
     db.commit()
     db.refresh(design)
+
+    record_metric(db, run_seq, "overall", "success", 1, design_id=design.id)
 
     log_activity(
         db, "design", "ok",
@@ -331,3 +350,15 @@ def search_trends(db: Session = Depends(get_db), _admin: User = Depends(require_
 
     trending.sort(key=lambda t: t["search_count"], reverse=True)
     return trending
+
+
+@router.get("/api/admin/evals/summary")
+def evals_summary(db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
+    """
+    Backs the admin "Evaluation" dashboard: per-stage success rate +
+    average latency over the last 30 generation runs, plus the
+    relevance-score trend as a plain list the frontend sparklines - see
+    app/evaluation.py for what each number means and why it's computed
+    the way it is.
+    """
+    return eval_summarize(db)
