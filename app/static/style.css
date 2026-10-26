@@ -165,6 +165,10 @@ button:hover { opacity: 0.9; }
 .status-pending { background: #fff3cd; color: #856404; }
 .status-approved { background: #d4edda; color: #155724; }
 .status-rejected { background: #f8d7da; color: #721c24; }
+.garment-badge {
+  display: inline-block; font-size: 11px; font-weight: 600; color: var(--muted);
+  margin: 0 0 6px 6px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border);
+}
 .design-summary {
   font-size: 12.5px; color: var(--text); margin: 0 0 6px;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;

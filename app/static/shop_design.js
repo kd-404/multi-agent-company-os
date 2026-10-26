@@ -25,10 +25,12 @@ function formatDate(iso) {
 }
 
 function productCardHtml(p) {
+  const garmentTag = p.garment_label && p.color_label ? `${p.garment_label} · ${p.color_label}` : "";
   const meta = `${p.sources ? p.sources.length : 0} source${(p.sources || []).length === 1 ? "" : "s"} · ${formatDate(p.created_at)}`;
   return `
     <a class="product-card" href="/shop/design/${p.id}">
       <div class="product-media">
+        ${garmentTag ? `<span class="garment-tag">${garmentTag}</span>` : ""}
         <img src="${p.mockups.front}" alt="" loading="lazy" />
         <div class="product-overlay">Quick view</div>
       </div>
@@ -52,6 +54,9 @@ async function loadDesign() {
   activeDesign = await res.json();
   document.title = `Loomwell — ${activeDesign.trend_summary.slice(0, 60)}`;
   document.getElementById("detail-title").textContent = activeDesign.trend_summary;
+  if (activeDesign.garment_label && activeDesign.color_label) {
+    document.getElementById("detail-eyebrow").textContent = `${activeDesign.garment_label} · ${activeDesign.color_label} · Loomwell original`;
+  }
 
   const sourcesEl = document.getElementById("detail-sources");
   sourcesEl.innerHTML = activeDesign.sources.length

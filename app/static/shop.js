@@ -54,6 +54,7 @@ function productCardHtml(p) {
   const badge = typeof p.similarity === "number"
     ? `<span class="search-match-badge">${p.similarity}% match</span>`
     : "";
+  const garmentTag = p.garment_label && p.color_label ? `${p.garment_label} · ${p.color_label}` : "";
   const meta = typeof p.similarity === "number"
     ? `${p.sources.length} source${p.sources.length === 1 ? "" : "s"}`
     : `${p.sources.length} source${p.sources.length === 1 ? "" : "s"} · ${formatDate(p.created_at)}`;
@@ -61,6 +62,7 @@ function productCardHtml(p) {
     <div class="product-card" data-id="${p.id}" tabindex="0" role="button" aria-label="View design">
       <div class="product-media">
         ${badge}
+        ${garmentTag ? `<span class="garment-tag">${garmentTag}</span>` : ""}
         <img src="${p.mockups.front}" alt="" loading="lazy" />
         <div class="product-overlay">Quick view</div>
       </div>
@@ -171,6 +173,8 @@ function openModal(id) {
   if (!product) return;
   activeProduct = product;
 
+  document.getElementById("modal-title").textContent =
+    product.garment_label && product.color_label ? `${product.garment_label} · ${product.color_label}` : "Design";
   document.getElementById("modal-summary").textContent = product.trend_summary;
   document.getElementById("modal-detail-link").href = `/shop/design/${product.id}`;
   const sourcesEl = document.getElementById("modal-sources");

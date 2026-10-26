@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, LargeBinary
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime, timezone
@@ -77,23 +79,35 @@ class Design(Base):
     social_caption = Column(Text, nullable=True)
     social_hashtags = Column(String(400), nullable=True)
 
+    # --- Product matrix (see app/garments.py) ---
+    # Which garment type/color this design's mockups render onto, assigned
+    # once at generation time (app/garments.pick_garment_and_color) so the
+    # same design always shows up the same way site-wide, rather than a
+    # different shirt on every request. Null on designs created before this
+    # existed - compositing falls back to garments.DEFAULT_GARMENT/COLOR.
+    garment = Column(String(20), nullable=True)
+    color = Column(String(20), nullable=True)
+
 
 class MockupTemplate(Base):
     """
-    One row per camera angle ("front", "back", "model") - a blank, plain
-    white T-shirt product photo generated ONCE via the design agent's same
-    image pipeline, then reused forever as the backdrop every approved
-    design gets composited onto (see app/compositing.py).
+    One row per (garment, color, camera angle) combo - e.g. ("hoodie",
+    "black", "model") - a blank product photo generated ONCE via the
+    design agent's same image pipeline, then reused forever as the
+    backdrop every approved design assigned to that combo gets composited
+    onto (see app/compositing.py and app/garments.py for the matrix).
 
     This is deliberately separate from Design: it's not a product a
     customer sees, it's a fixed template asset. Re-running the generator
-    overwrites the row for that slot (upsert), so there's only ever one
-    "current" template per angle.
+    overwrites the row for that exact combo (upsert), so there's only ever
+    one "current" template per (garment, color, slot).
     """
     __tablename__ = "mockup_templates"
 
     id = Column(Integer, primary_key=True, index=True)
-    slot = Column(String(20), unique=True, nullable=False)  # "front" | "back" | "model"
+    garment = Column(String(20), nullable=False, default="tshirt")
+    color = Column(String(20), nullable=False, default="white")
+    slot = Column(String(20), nullable=False)  # "front" | "back" | "model"
     image_data = Column(LargeBinary, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -153,31 +167,63 @@ def _run_lightweight_migrations():
     from sqlalchemy import text, inspect
 
     inspector = inspect(engine)
-    if "designs" not in inspector.get_table_names():
-        return
-    existing_columns = {c["name"] for c in inspector.get_columns("designs")}
-
-    columns_to_add = {
-        "image_hash": "VARCHAR(70)",
-        "vision_tags": "TEXT",
-        "dominant_color": "VARCHAR(20)",
-        "virtual_stock": "INTEGER NOT NULL DEFAULT 50",
-        "social_caption": "TEXT",
-        "social_hashtags": "VARCHAR(400)",
-    }
+    table_names = inspector.get_table_names()
     is_postgres = engine.dialect.name == "postgresql"
-    with engine.begin() as conn:
-        for col_name, col_type in columns_to_add.items():
-            if col_name in existing_columns:
-                continue
-            if is_postgres:
-                conn.execute(text(f"ALTER TABLE designs ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
-            else:
-                # SQLite (local dev fallback) has no "IF NOT EXISTS" for
-                # ADD COLUMN, but we've already filtered to missing columns.
-                # SQLite also rejects a non-constant DEFAULT/NOT NULL combo
-                # less strictly than Postgres, so this still works as-is.
-                conn.execute(text(f"ALTER TABLE designs ADD COLUMN {col_name} {col_type}"))
+
+    def _add_missing_columns(table: str, columns_to_add: dict[str, str]):
+        existing_columns = {c["name"] for c in inspector.get_columns(table)}
+        with engine.begin() as conn:
+            for col_name, col_type in columns_to_add.items():
+                if col_name in existing_columns:
+                    continue
+                if is_postgres:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
+                else:
+                    # SQLite (local dev fallback) has no "IF NOT EXISTS" for
+                    # ADD COLUMN, but we've already filtered to missing
+                    # columns, so this is safe as-is.
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type}"))
+
+    if "designs" in table_names:
+        _add_missing_columns("designs", {
+            "image_hash": "VARCHAR(70)",
+            "vision_tags": "TEXT",
+            "dominant_color": "VARCHAR(20)",
+            "virtual_stock": "INTEGER NOT NULL DEFAULT 50",
+            "social_caption": "TEXT",
+            "social_hashtags": "VARCHAR(400)",
+            "garment": "VARCHAR(20)",
+            "color": "VARCHAR(20)",
+        })
+
+    if "mockup_templates" in table_names:
+        # mockup_templates used to be one row per slot ("front"/"back"/
+        # "model") with a UNIQUE constraint on slot alone. Now it's one row
+        # per (garment, color, slot) - see app/garments.py - so that old
+        # single-column uniqueness has to go before we can store more than
+        # one color/garment per slot.
+        if is_postgres:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE mockup_templates DROP CONSTRAINT IF EXISTS mockup_templates_slot_key"
+                ))
+        _add_missing_columns("mockup_templates", {
+            "garment": "VARCHAR(20) NOT NULL DEFAULT 'tshirt'",
+            "color": "VARCHAR(20) NOT NULL DEFAULT 'white'",
+        })
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ux_mockup_templates_combo "
+                    "ON mockup_templates (garment, color, slot)"
+                ))
+        except Exception:
+            # Best-effort: app-level upsert logic (filter-then-insert-or-
+            # update) already enforces "one row per combo" without this
+            # index; it's a safety net, not load-bearing.
+            logging.getLogger(__name__).exception(
+                "Could not create ux_mockup_templates_combo index (non-fatal)"
+            )
 
 
 def get_db():

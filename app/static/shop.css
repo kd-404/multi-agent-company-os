@@ -378,6 +378,20 @@ a { color: inherit; }
   border-radius: 100px;
   border: 1px solid var(--hairline);
 }
+.garment-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+  background: rgba(10, 10, 16, 0.75);
+  backdrop-filter: blur(4px);
+  color: var(--lavender);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid var(--hairline);
+}
 #search-results { margin-top: 28px; }
 #search-results .product-card { position: relative; }
 

@@ -30,6 +30,7 @@ from ..image_client import generate_image
 from ..visual_search import extract_signals, tags_to_text, color_to_text
 from ..trend_research import research_trend
 from ..agent_log import log_activity
+from ..garments import pick_garment_and_color, garment_label, color_label
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -99,6 +100,11 @@ def _generate_one_design(query: str, db: Session) -> dict:
     except Exception:
         log.exception("Vision tagging FAILED for new design (non-fatal, will backfill on search)")
 
+    # Mixed product matrix (see app/garments.py): every design lands on a
+    # different garment type, and a color picked to contrast with the
+    # design's own dominant color, instead of always the same white tee.
+    garment, color = pick_garment_and_color(dominant_color_text)
+
     design = Design(
         trend_query=query,
         trend_summary=summary,
@@ -107,13 +113,19 @@ def _generate_one_design(query: str, db: Session) -> dict:
         image_data=image_bytes,
         vision_tags=vision_tags_text,
         dominant_color=dominant_color_text,
+        garment=garment,
+        color=color,
         status="pending",
     )
     db.add(design)
     db.commit()
     db.refresh(design)
 
-    log_activity(db, "design", "ok", f"Generated design #{design.id} from live trend research.", design_id=design.id)
+    log_activity(
+        db, "design", "ok",
+        f"Generated design #{design.id} ({garment_label(garment)}, {color_label(color)}) from live trend research.",
+        design_id=design.id,
+    )
 
     return {
         "status": "ok",
@@ -121,6 +133,8 @@ def _generate_one_design(query: str, db: Session) -> dict:
         "image_url": f"/api/admin/design/{design.id}/image",
         "trend_summary": summary,
         "sources": sources,
+        "garment": garment,
+        "color": color,
     }
 
 
@@ -170,6 +184,10 @@ def list_designs(db: Session = Depends(get_db), _admin: User = Depends(require_a
             "sources": d.sources.split("\n") if d.sources else [],
             "image_url": f"/api/admin/design/{d.id}/image",
             "status": d.status,
+            "garment": d.garment,
+            "color": d.color,
+            "garment_label": garment_label(d.garment),
+            "color_label": color_label(d.color),
             "created_at": d.created_at.isoformat(),
         }
         for d in designs

@@ -8,24 +8,30 @@ mockup and is cheap, fast and deterministic.
 
 PRINT_AREAS below are first-guess coordinates (as fractions of the template
 image's width/height) for where the chest-print region sits in each
-template photo. They were picked to match the framing the template prompts
-ask for (flat-lay, centered, shot from directly above for "front"/"back";
-chest-to-waist, facing camera for "model"), but the image model doesn't
-guarantee pixel-perfect framing every time it's asked to regenerate a
-template - if a design looks off-center or mis-sized once real templates
-exist, these are the numbers to nudge (tracked as task #9).
+template photo, PER GARMENT (a hoodie's kangaroo pocket/hood sits the print
+area a bit lower than a plain tee). They were picked to match the framing
+the template prompts ask for (flat-lay, centered, shot from directly above
+for "front"/"back"; chest-to-waist, facing camera for "model"), but the
+image model doesn't guarantee pixel-perfect framing every time it's asked
+to regenerate a template - if a design looks off-center or mis-sized once
+real templates exist, these are the numbers to nudge (tracked as task #9).
 """
 from io import BytesIO
 
 from PIL import Image, ImageChops, ImageFilter
 
-# (left, top, right, bottom) as fractions of template width/height.
-PRINT_AREAS: dict[str, tuple[float, float, float, float]] = {
-    "front": (0.37, 0.27, 0.63, 0.50),
-    "model": (0.34, 0.20, 0.66, 0.45),
-    # "back" has no print area - a design agent run only ever produces one
-    # graphic, meant for the front; the back template stays a blank shirt,
-    # same as a real single-sided print-on-demand listing.
+# garment -> slot -> (left, top, right, bottom) as fractions of template
+# width/height. "back" has no print area - a design agent run only ever
+# produces one graphic, meant for the front; the back template stays a
+# blank garment, same as a real single-sided print-on-demand listing.
+_TSHIRT_AREAS = {"front": (0.37, 0.27, 0.63, 0.50), "model": (0.34, 0.20, 0.66, 0.45)}
+_LONG_SLEEVE_AREAS = {"front": (0.37, 0.27, 0.63, 0.50), "model": (0.34, 0.20, 0.66, 0.45)}
+_HOODIE_AREAS = {"front": (0.37, 0.32, 0.63, 0.53), "model": (0.34, 0.25, 0.66, 0.48)}
+
+PRINT_AREAS: dict[str, dict[str, tuple[float, float, float, float]]] = {
+    "tshirt": _TSHIRT_AREAS,
+    "long-sleeve": _LONG_SLEEVE_AREAS,
+    "hoodie": _HOODIE_AREAS,
 }
 
 
@@ -71,15 +77,16 @@ def _shade_onto_fabric(design_rgba: Image.Image, template_region: Image.Image) -
     return shaded
 
 
-def composite_mockup(template_bytes: bytes, design_bytes: bytes | None, slot: str) -> bytes:
+def composite_mockup(template_bytes: bytes, design_bytes: bytes | None, slot: str, garment: str = "tshirt") -> bytes:
     """
     Returns PNG bytes of `template_bytes` with `design_bytes` composited
-    into the print area for `slot`. If `slot` has no print area (currently
-    "back") or design_bytes is None, the template is returned unchanged.
+    into the print area for `garment`/`slot`. If `slot` has no print area
+    (currently "back") or design_bytes is None, the template is returned
+    unchanged.
     """
     template = Image.open(BytesIO(template_bytes)).convert("RGBA")
 
-    box_frac = PRINT_AREAS.get(slot)
+    box_frac = PRINT_AREAS.get(garment, _TSHIRT_AREAS).get(slot)
     if box_frac is None or design_bytes is None:
         out = BytesIO()
         template.save(out, format="PNG")

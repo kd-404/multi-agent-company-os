@@ -13,8 +13,10 @@ import logging
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlalchemy.orm import Session
 
-from ..db import get_db, Design, MockupTemplate, SearchLog
+from ..db import get_db, Design, SearchLog
 from ..compositing import composite_mockup
+from ..garments import garment_label, color_label, DEFAULT_GARMENT
+from .mockup_routes import resolve_design_template
 from ..visual_search import (
     extract_signals,
     match_score,
@@ -48,6 +50,9 @@ def list_products(db: Session = Depends(get_db)):
             "trend_summary": d.trend_summary,
             "sources": d.sources.split("\n") if d.sources else [],
             "mockups": {slot: f"/api/public/design/{d.id}/mockup/{slot}" for slot in MOCKUP_SLOTS},
+            "garment": d.garment or DEFAULT_GARMENT,
+            "garment_label": garment_label(d.garment),
+            "color_label": color_label(d.color),
             "created_at": d.created_at.isoformat(),
         }
         for d in designs
@@ -65,6 +70,9 @@ def get_product(design_id: int, db: Session = Depends(get_db)):
         "trend_summary": d.trend_summary,
         "sources": d.sources.split("\n") if d.sources else [],
         "mockups": {slot: f"/api/public/design/{d.id}/mockup/{slot}" for slot in MOCKUP_SLOTS},
+        "garment": d.garment or DEFAULT_GARMENT,
+        "garment_label": garment_label(d.garment),
+        "color_label": color_label(d.color),
         "caption": d.social_caption,
         "hashtags": d.social_hashtags,
         "created_at": d.created_at.isoformat(),
@@ -84,11 +92,11 @@ def public_design_mockup(design_id: int, slot: str, db: Session = Depends(get_db
     if not design:
         raise HTTPException(status_code=404, detail="Design not found")
 
-    template = db.query(MockupTemplate).filter(MockupTemplate.slot == slot).first()
+    template = resolve_design_template(design, slot, db)
     if not template:
         raise HTTPException(status_code=409, detail="Mockup templates not generated yet")
 
-    mockup_bytes = composite_mockup(template.image_data, design.image_data, slot)
+    mockup_bytes = composite_mockup(template.image_data, design.image_data, slot, garment=design.garment or DEFAULT_GARMENT)
     return Response(content=mockup_bytes, media_type="image/png", headers=MOCKUP_CACHE_HEADERS)
 
 
@@ -147,6 +155,9 @@ async def visual_search(file: UploadFile = File(...), db: Session = Depends(get_
             "trend_summary": d.trend_summary,
             "sources": d.sources.split("\n") if d.sources else [],
             "mockups": {slot: f"/api/public/design/{d.id}/mockup/{slot}" for slot in MOCKUP_SLOTS},
+            "garment": d.garment or DEFAULT_GARMENT,
+            "garment_label": garment_label(d.garment),
+            "color_label": color_label(d.color),
             "similarity": round(score * 100),
         }
         for score, d in top_matches
