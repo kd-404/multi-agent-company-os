@@ -20,9 +20,11 @@ the pipeline demo.
 import re
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..db import get_db, Design, User
 from ..auth import require_admin
 from ..trend_research import research_trend
@@ -151,6 +153,86 @@ def scan_trends(db: Session = Depends(get_db), _admin: User = Depends(require_ad
         "best_overlap": round(best_overlap, 2),
         "generated_design_id": generated,
     }
+
+
+GRAPH_API_VERSION = "v21.0"
+
+
+def instagram_configured() -> bool:
+    return bool(settings.INSTAGRAM_ACCESS_TOKEN and settings.INSTAGRAM_BUSINESS_ACCOUNT_ID)
+
+
+def _post_to_instagram(image_url: str, caption: str) -> str:
+    """
+    Two-step Instagram Graph API publish: create a media container from a
+    PUBLICLY reachable image URL (Instagram's servers fetch it themselves -
+    it can't be a local/relative path), then publish that container. Raises
+    on any HTTP error; returns the published media id.
+    """
+    base = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{settings.INSTAGRAM_BUSINESS_ACCOUNT_ID}"
+    create = httpx.post(
+        f"{base}/media",
+        data={
+            "image_url": image_url,
+            "caption": caption,
+            "access_token": settings.INSTAGRAM_ACCESS_TOKEN,
+        },
+        timeout=30.0,
+    )
+    create.raise_for_status()
+    creation_id = create.json()["id"]
+
+    publish = httpx.post(
+        f"{base}/media_publish",
+        data={"creation_id": creation_id, "access_token": settings.INSTAGRAM_ACCESS_TOKEN},
+        timeout=30.0,
+    )
+    publish.raise_for_status()
+    return publish.json()["id"]
+
+
+@router.post("/api/admin/marketing/schedule-post/{design_id}")
+def schedule_post(
+    design_id: int, request: Request, db: Session = Depends(get_db), _admin: User = Depends(require_admin)
+):
+    """
+    "Post to Instagram" for one approved design, using its already-drafted
+    caption/hashtags (drafted on the fly here if that hasn't happened yet).
+    Despite the name there's no actual time-of-day scheduler behind this
+    yet - it posts immediately when clicked; the name matches what the
+    admin UI calls the button, and is the natural next step if real
+    scheduling gets built later.
+    """
+    design = db.query(Design).filter(Design.id == design_id, Design.status == "approved").first()
+    if not design:
+        raise HTTPException(status_code=404, detail="Approved design not found")
+
+    if not design.social_caption:
+        caption, hashtags = _draft_caption(design)
+        design.social_caption, design.social_hashtags = caption, hashtags
+        db.commit()
+
+    full_caption = f"{design.social_caption}\n\n{design.social_hashtags or ''}".strip()
+
+    if not instagram_configured():
+        entry = log_activity(
+            db, "marketing", "simulated",
+            f"Simulated an Instagram post for design #{design_id}: \"{design.social_caption[:100]}\" "
+            f"- Instagram isn't connected yet, nothing was actually posted.",
+            design_id=design_id,
+        )
+        return {"mode": "simulated", "design_id": design_id, "message": entry.message}
+
+    image_url = f"{str(request.base_url).rstrip('/')}/api/public/design/{design_id}/mockup/front"
+    try:
+        media_id = _post_to_instagram(image_url, full_caption)
+    except Exception as e:
+        log.exception("Instagram post failed for design %s", design_id)
+        log_activity(db, "marketing", "error", f"Instagram post failed for design #{design_id}: {type(e).__name__}: {e}", design_id=design_id)
+        raise HTTPException(status_code=502, detail="Instagram post failed - check Log Stream for details.")
+
+    log_activity(db, "marketing", "ok", f"Posted design #{design_id} to Instagram (media id {media_id}).", design_id=design_id)
+    return {"mode": "live", "design_id": design_id, "media_id": media_id}
 
 
 @router.get("/api/admin/marketing/feed")

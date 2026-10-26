@@ -494,6 +494,8 @@ async function loadMarketingFeed() {
         ${d.caption
           ? `<p class="marketing-caption">${escapeHtmlAdmin(d.caption)}</p><p class="marketing-hashtags">${escapeHtmlAdmin(d.hashtags || "")}</p>`
           : `<button type="button" class="draft-caption-btn" data-id="${d.id}">Draft caption</button>`}
+        <button type="button" class="schedule-post-btn" data-id="${d.id}">Post to Instagram</button>
+        <p class="schedule-post-status" id="schedule-post-status-${d.id}"></p>
       </div>
     </div>`).join("");
   el.querySelectorAll(".draft-caption-btn").forEach((b) => {
@@ -504,6 +506,25 @@ async function loadMarketingFeed() {
       loadMarketingFeed();
       loadAgentStatus();
       loadAgentFeed();
+    });
+  });
+  el.querySelectorAll(".schedule-post-btn").forEach((b) => {
+    b.addEventListener("click", async () => {
+      const statusEl = document.getElementById(`schedule-post-status-${b.dataset.id}`);
+      b.disabled = true;
+      b.textContent = "Posting...";
+      try {
+        const res = await fetch(`/api/admin/marketing/schedule-post/${b.dataset.id}`, { method: "POST" });
+        const data = await res.json().catch(() => ({}));
+        statusEl.textContent = res.ok
+          ? (data.mode === "live" ? `Posted to Instagram (media ${data.media_id}).` : data.message)
+          : (data.detail || "Post failed - check Log Stream.");
+      } finally {
+        b.disabled = false;
+        b.textContent = "Post to Instagram";
+        loadAgentStatus();
+        loadAgentFeed();
+      }
     });
   });
 }
