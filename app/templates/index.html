@@ -119,13 +119,33 @@
               <p class="hint">Researches current T-shirt trends live on the web, then generates a design from them.</p>
               <form id="design-generate-form">
                 <input type="text" id="design-focus" placeholder="Optional: narrow the trend search (e.g. 'minimalist nature graphics')" />
+                <div class="generate-options">
+                  <label class="generate-option">
+                    Garment
+                    <select id="design-garment">
+                      <option value="">Random / mixed</option>
+                      <option value="tshirt">T-Shirt</option>
+                      <option value="long-sleeve">Full-Sleeve</option>
+                      <option value="hoodie">Hoodie</option>
+                    </select>
+                  </label>
+                  <label class="generate-option">
+                    Color
+                    <select id="design-color">
+                      <option value="">Random / mixed</option>
+                      <option value="white">White</option>
+                      <option value="black">Black</option>
+                      <option value="heather-gray">Heather Gray</option>
+                    </select>
+                  </label>
+                </div>
                 <button type="submit" id="design-generate-btn">Generate new design</button>
               </form>
               <p class="note" id="design-generate-status"></p>
 
               <div class="batch-generate">
                 <button type="button" id="batch-generate-btn">Generate a batch of 8 (varied styles)</button>
-                <p class="hint">Runs 8 generations across different style presets (streetwear, line-art, nature, retro, etc.) instead of one generic look repeated. Takes a few minutes &mdash; stay on this page.</p>
+                <p class="hint">Runs 8 generations across different style presets (streetwear, line-art, nature, retro, etc.) instead of one generic look repeated. Uses the same Garment/Color choice above for the whole batch (leave on "Random / mixed" for real variety). Takes a few minutes &mdash; stay on this page.</p>
                 <p class="note" id="batch-generate-status"></p>
               </div>
 

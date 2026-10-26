@@ -140,6 +140,15 @@ button:hover { opacity: 0.9; }
 #design-focus { flex: 1; }
 #design-generate-btn:disabled { opacity: 0.6; cursor: wait; }
 #design-generate-status { color: #c0392b; }
+.generate-options { display: flex; gap: 12px; margin: 8px 0; }
+.generate-option {
+  flex: 1; display: flex; flex-direction: column; gap: 4px;
+  font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+}
+.generate-option select {
+  font-size: 13px; font-weight: 400; color: var(--text); text-transform: none;
+  padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff;
+}
 
 .batch-generate {
   margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border);
@@ -179,6 +188,12 @@ button:hover { opacity: 0.9; }
 .design-actions button { flex: 1; padding: 6px; font-size: 12px; }
 .approve-btn { background: #2e7d32 !important; }
 .reject-btn { background: #c0392b !important; }
+.reassign-row {
+  display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);
+}
+.reassign-row select { flex: 1; font-size: 11px; padding: 4px; border: 1px solid var(--border); border-radius: 6px; }
+.reassign-btn { font-size: 11px; padding: 4px 8px; background: var(--navy) !important; white-space: nowrap; }
+.reassign-btn:disabled { opacity: 0.6; cursor: wait; }
 
 #interest-panel { grid-column: span 2; }
 .interest-row {

@@ -264,12 +264,33 @@ async function loadDesigns() {
   designGallery.innerHTML = designs.map(designCardHtml).join("");
 
   designs.forEach((d) => {
-    if (d.status !== "pending") return;
-    const approveBtn = document.getElementById(`approve-${d.id}`);
-    const rejectBtn = document.getElementById(`reject-${d.id}`);
-    if (approveBtn) approveBtn.onclick = () => reviewDesign(d.id, "approve");
-    if (rejectBtn) rejectBtn.onclick = () => reviewDesign(d.id, "reject");
+    if (d.status === "pending") {
+      const approveBtn = document.getElementById(`approve-${d.id}`);
+      const rejectBtn = document.getElementById(`reject-${d.id}`);
+      if (approveBtn) approveBtn.onclick = () => reviewDesign(d.id, "approve");
+      if (rejectBtn) rejectBtn.onclick = () => reviewDesign(d.id, "reject");
+    }
+    const reassignBtn = document.getElementById(`reassign-btn-${d.id}`);
+    if (reassignBtn) reassignBtn.onclick = () => reassignDesign(d.id);
   });
+}
+
+async function reassignDesign(id) {
+  const btn = document.getElementById(`reassign-btn-${id}`);
+  const garment = document.getElementById(`reassign-garment-${id}`).value;
+  const color = document.getElementById(`reassign-color-${id}`).value;
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+  try {
+    const form = new FormData();
+    form.append("garment", garment);
+    form.append("color", color);
+    await fetch(`/api/admin/design/${id}/reassign`, { method: "POST", body: form });
+    loadDesigns();
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "Change garment/color";
+  }
 }
 
 function designCardHtml(d) {
@@ -291,6 +312,20 @@ function designCardHtml(d) {
          ).join("")}
        </div>`
     : `<p class="design-sources">Generate mockup templates above to preview this on a shirt.</p>`;
+  const reassignHtml = `
+    <div class="reassign-row">
+      <select id="reassign-garment-${d.id}">
+        <option value="tshirt" ${d.garment === "tshirt" || !d.garment ? "selected" : ""}>T-Shirt</option>
+        <option value="long-sleeve" ${d.garment === "long-sleeve" ? "selected" : ""}>Full-Sleeve</option>
+        <option value="hoodie" ${d.garment === "hoodie" ? "selected" : ""}>Hoodie</option>
+      </select>
+      <select id="reassign-color-${d.id}">
+        <option value="white" ${d.color === "white" || !d.color ? "selected" : ""}>White</option>
+        <option value="black" ${d.color === "black" ? "selected" : ""}>Black</option>
+        <option value="heather-gray" ${d.color === "heather-gray" ? "selected" : ""}>Heather Gray</option>
+      </select>
+      <button type="button" id="reassign-btn-${d.id}" class="reassign-btn">Change garment/color</button>
+    </div>`;
   return `
     <div class="design-card">
       <img src="${d.image_url}" alt="Generated design ${d.id}" loading="lazy" />
@@ -301,6 +336,7 @@ function designCardHtml(d) {
         <p class="design-sources">Sources: ${sourcesHtml || "none"}</p>
         ${actions}
         ${mockupsHtml}
+        ${reassignHtml}
       </div>
     </div>`;
 }
@@ -321,6 +357,8 @@ document.getElementById("batch-generate-btn").addEventListener("click", async ()
   try {
     const form = new FormData();
     form.append("count", "8");
+    form.append("garment", document.getElementById("design-garment").value);
+    form.append("color", document.getElementById("design-color").value);
     const res = await fetch("/api/admin/design/generate-batch", { method: "POST", body: form });
     const data = await res.json();
     const failed = (data.results || []).filter((r) => r.status !== "ok");
@@ -374,6 +412,8 @@ document.getElementById("design-generate-form").onsubmit = async (e) => {
   // was left blank. The backend already treats "" the same as omitted.
   const form = new FormData();
   form.append("focus", focus);
+  form.append("garment", document.getElementById("design-garment").value);
+  form.append("color", document.getElementById("design-color").value);
 
   try {
     const res = await fetch("/api/admin/design/generate", { method: "POST", body: form });

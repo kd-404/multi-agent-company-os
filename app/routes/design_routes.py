@@ -30,7 +30,7 @@ from ..image_client import generate_image
 from ..visual_search import extract_signals, tags_to_text, color_to_text
 from ..trend_research import research_trend
 from ..agent_log import log_activity
-from ..garments import pick_garment_and_color, garment_label, color_label
+from ..garments import pick_garment_and_color, garment_label, color_label, GARMENTS, COLORS
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -63,7 +63,7 @@ BATCH_STYLE_PRESETS = [
 ]
 
 
-def _generate_one_design(query: str, db: Session) -> dict:
+def _generate_one_design(query: str, db: Session, forced_garment: str | None = None, forced_color: str | None = None) -> dict:
     """
     The whole pipeline for one design: trend research -> image -> tagging ->
     saved Design row. Shared by the single-design, batch, and agent-demo
@@ -102,8 +102,13 @@ def _generate_one_design(query: str, db: Session) -> dict:
 
     # Mixed product matrix (see app/garments.py): every design lands on a
     # different garment type, and a color picked to contrast with the
-    # design's own dominant color, instead of always the same white tee.
-    garment, color = pick_garment_and_color(dominant_color_text)
+    # design's own dominant color, instead of always the same white tee -
+    # unless the admin forced a specific garment/color for this run (the
+    # "Garment"/"Color" selectors on the Generate form), in which case that
+    # choice wins outright.
+    auto_garment, auto_color = pick_garment_and_color(dominant_color_text)
+    garment = forced_garment if forced_garment in GARMENTS else auto_garment
+    color = forced_color if forced_color in COLORS else auto_color
 
     design = Design(
         trend_query=query,
@@ -141,11 +146,13 @@ def _generate_one_design(query: str, db: Session) -> dict:
 @router.post("/api/admin/design/generate")
 def generate_design(
     focus: str = Form(default=""),  # optional: admin can narrow the trend search
+    garment: str = Form(default=""),  # optional: force a garment instead of random
+    color: str = Form(default=""),  # optional: force a color instead of random
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
     query = focus.strip() or DEFAULT_TREND_QUERY
-    return _generate_one_design(query, db)
+    return _generate_one_design(query, db, forced_garment=garment or None, forced_color=color or None)
 
 
 MAX_BATCH_SIZE = 8
@@ -154,6 +161,8 @@ MAX_BATCH_SIZE = 8
 @router.post("/api/admin/design/generate-batch")
 def generate_batch(
     count: int = Form(default=MAX_BATCH_SIZE),
+    garment: str = Form(default=""),  # optional: force every design in the batch onto one garment
+    color: str = Form(default=""),  # optional: force every design in the batch onto one color
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
@@ -162,15 +171,65 @@ def generate_batch(
     preset (BATCH_STYLE_PRESETS) so the batch doesn't converge on one look.
     Synchronous and can take a couple of minutes for a full batch of 8 -
     the admin UI warns about this and shows a running count rather than a
-    single spinner.
+    single spinner. Garment/color default to the mixed-matrix auto-pick
+    (each design independently random, contrast-matched to its own art) -
+    forcing one here pins every design in this batch to the same garment
+    and/or color instead, for when the admin wants a themed batch.
     """
     count = max(1, min(count, MAX_BATCH_SIZE))
+    forced_garment, forced_color = garment or None, color or None
     results = []
     for i in range(count):
         preset = BATCH_STYLE_PRESETS[i % len(BATCH_STYLE_PRESETS)]
         query = f"{preset} — trending T-shirt graphic design right now"
-        results.append(_generate_one_design(query, db))
+        results.append(_generate_one_design(query, db, forced_garment=forced_garment, forced_color=forced_color))
     return {"results": results, "succeeded": sum(1 for r in results if r["status"] == "ok")}
+
+
+@router.post("/api/admin/design/{design_id}/reassign")
+def reassign_design(
+    design_id: int,
+    garment: str = Form(...),
+    color: str = Form(...),
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    """
+    Moves an already-generated design onto a different garment/color combo
+    without re-running trend research or image generation - for the designs
+    that predate the garment matrix (they all landed on the T-Shirt/White
+    default) or any design the admin just wants to see on a different
+    product. The mockup is re-composited on the fly from the existing
+    artwork the next time it's requested (see mockup_routes.resolve_design_template) -
+    nothing to regenerate here, just the two columns on the Design row.
+    """
+    if garment not in GARMENTS:
+        raise HTTPException(status_code=400, detail=f"Unknown garment '{garment}'")
+    if color not in COLORS:
+        raise HTTPException(status_code=400, detail=f"Unknown color '{color}'")
+
+    design = db.query(Design).filter(Design.id == design_id).first()
+    if not design:
+        raise HTTPException(status_code=404, detail="Design not found")
+
+    design.garment = garment
+    design.color = color
+    db.commit()
+
+    log_activity(
+        db, "design", "ok",
+        f"Reassigned design #{design.id} to {garment_label(garment)}, {color_label(color)}.",
+        design_id=design.id,
+    )
+
+    return {
+        "status": "ok",
+        "id": design.id,
+        "garment": garment,
+        "color": color,
+        "garment_label": garment_label(garment),
+        "color_label": color_label(color),
+    }
 
 
 @router.get("/api/admin/design/list")
