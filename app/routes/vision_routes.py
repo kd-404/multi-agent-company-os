@@ -9,7 +9,7 @@ Two modes from the same uploaded image:
 from fastapi import APIRouter, UploadFile, File, Form, Depends
 from azure.ai.vision.imageanalysis.models import VisualFeatures
 
-from ..auth import get_current_user
+from ..auth import require_permission
 from ..vision_client import get_vision_client
 
 router = APIRouter()
@@ -26,7 +26,7 @@ DENY_LIST = [
 async def analyze_image(
     file: UploadFile = File(...),
     mode: str = Form("general"),
-    _user=Depends(get_current_user),
+    _user=Depends(require_permission("vision")),
 ):
     client = get_vision_client()
     image_bytes = await file.read()

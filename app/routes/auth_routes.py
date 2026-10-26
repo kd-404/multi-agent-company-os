@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from ..db import get_db, User
-from ..auth import hash_password, verify_password, get_current_user
+from ..auth import hash_password, verify_password, get_current_user, permissions_for
 
 router = APIRouter()
 
@@ -48,4 +48,4 @@ def logout(request: Request):
 
 @router.get("/api/me")
 def me(user: User = Depends(get_current_user)):
-    return {"email": user.email, "role": user.role}
+    return {"email": user.email, "role": user.role, "permissions": permissions_for(user.role)}

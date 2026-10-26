@@ -1,0 +1,98 @@
+{% extends "base_shop.html" %}
+{% block title %}Secure checkout — Loomwell{% endblock %}
+{% block header %}
+  <header class="co-header">
+    <a href="/shop" class="wordmark" aria-label="Loomwell home">Loomwell</a>
+    <span class="secure"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Secure checkout</span>
+  </header>
+  <div class="co-demo" role="note">Demo checkout for a portfolio project — you'll go through every step, but <strong>no payment is taken</strong> and nothing is shipped.</div>
+{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div id="co-root">
+  <div class="stepper" id="stepper" aria-label="Checkout progress">
+    <div class="step" data-n="1">Login</div>
+    <div class="step" data-n="2">Address</div>
+    <div class="step" data-n="3">Order summary</div>
+    <div class="step" data-n="4">Payment</div>
+  </div>
+
+  <div class="co-layout">
+    <div>
+      <section class="co-card" id="card-login">
+        <div class="co-card-head"><span><span class="num">1</span>Login</span><button type="button" class="link-btn hidden" id="login-change">Change</button></div>
+        <div class="co-body" id="login-body"></div>
+      </section>
+
+      <section class="co-card locked" id="card-address">
+        <div class="co-card-head"><span><span class="num">2</span>Delivery address</span><button type="button" class="link-btn hidden" id="address-change">Change</button></div>
+        <div class="co-body hidden" id="address-body">
+          <form id="address-form" class="form-grid" novalidate>
+            <div class="field"><label for="f-name">Full name</label><input id="f-name" name="name" type="text" autocomplete="name" /><p class="err"></p></div>
+            <div class="field"><label for="f-phone">Mobile number</label><input id="f-phone" name="phone" type="tel" inputmode="numeric" maxlength="14" autocomplete="tel" placeholder="10-digit number" /><p class="err"></p></div>
+            <div class="field"><label for="f-pincode">Pincode</label><input id="f-pincode" name="pincode" type="text" inputmode="numeric" maxlength="6" autocomplete="postal-code" /><p class="err"></p></div>
+            <div class="field"><label for="f-city">City / District</label><input id="f-city" name="city" type="text" autocomplete="address-level2" /><p class="err"></p></div>
+            <div class="field full"><label for="f-address">Address (house no., building, street, area)</label><textarea id="f-address" name="address" rows="3" autocomplete="street-address"></textarea><p class="err"></p></div>
+            <div class="field"><label for="f-state">State</label><select id="f-state" name="state" autocomplete="address-level1"><option value="">Select state</option></select><p class="err"></p></div>
+            <div class="field full"><button type="submit" class="btn btn-clay" id="address-submit">Deliver to this address</button></div>
+          </form>
+        </div>
+        <div class="co-body hidden co-summary-line" id="address-summary"></div>
+      </section>
+
+      <section class="co-card locked" id="card-summary">
+        <div class="co-card-head"><span><span class="num">3</span>Order summary</span><button type="button" class="link-btn hidden" id="summary-change">Change</button></div>
+        <div class="co-body hidden" id="summary-body">
+          <div class="item-row">
+            <img id="it-img" alt="" />
+            <div>
+              <h4 id="it-title"></h4>
+              <p class="muted" id="it-sub"></p>
+              <div class="item-opts">
+                <div class="size-row" id="it-sizes"></div>
+                <div class="qty"><button type="button" id="q-minus" aria-label="Decrease">−</button><span id="q-val">1</span><button type="button" id="q-plus" aria-label="Increase">+</button></div>
+              </div>
+              <p class="delivery-eta" id="it-eta"></p>
+            </div>
+          </div>
+          <div style="margin-top:16px"><button type="button" class="btn btn-clay" id="summary-continue">Continue to payment</button></div>
+        </div>
+        <div class="co-body hidden co-summary-line" id="summary-line"></div>
+      </section>
+
+      <section class="co-card locked" id="card-payment">
+        <div class="co-card-head"><span><span class="num">4</span>Payment options</span></div>
+        <div class="co-body hidden" id="payment-body">
+          <div class="pay-layout">
+            <div class="pay-tabs" id="pay-tabs" role="tablist">
+              <button type="button" class="pay-tab active" data-m="upi" role="tab">UPI</button>
+              <button type="button" class="pay-tab" data-m="card" role="tab">Credit / Debit card</button>
+              <button type="button" class="pay-tab" data-m="netbanking" role="tab">Net banking</button>
+              <button type="button" class="pay-tab" data-m="wallet" role="tab">Wallets</button>
+              <button type="button" class="pay-tab" data-m="cod" role="tab">Pay on delivery</button>
+            </div>
+            <div class="pay-pane" id="pay-pane"></div>
+          </div>
+          <div class="demo-pay-note">Demo only: choosing a method just records your preference for the order. We never ask for card numbers, CVV or UPI IDs here, and no money moves.</div>
+          <div style="margin-top:16px"><button type="button" class="btn btn-dark btn-block" id="place-order">Place order</button></div>
+          <p class="form-error" id="co-error" role="alert"></p>
+        </div>
+      </section>
+    </div>
+
+    <aside>
+      <div class="co-card price-card">
+        <div class="co-body" id="price-body"><p class="muted">Loading…</p></div>
+      </div>
+      <div class="trust-row"><span>🔒 Secure</span><span>↩ 7-day returns</span><span>✓ Genuine products</span></div>
+    </aside>
+  </div>
+  <div class="mobile-bar" id="mobile-bar"><div><div class="muted" style="font-size:12px">Total</div><strong id="mb-total" style="font-size:20px"></strong></div><button type="button" class="btn btn-dark btn-sm" id="mb-btn">Continue</button></div>
+</div>
+
+<div class="success hidden" id="success-root"></div>
+{% endblock %}
+{% block scripts %}
+<script>window.CO_KIND = {{ kind|tojson }}; window.CO_ID = {{ item_id }};</script>
+<script src="/static/checkout.js?v={{ asset_version }}"></script>
+{% endblock %}

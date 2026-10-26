@@ -50,16 +50,21 @@ document.getElementById("logout-btn").onclick = async () => {
 
 async function enterDashboard() {
   const me = await (await fetch("/api/me")).json();
+  // RBAC: customers belong on the storefront, not the staff dashboard.
+  if (me.role === "user") { window.location.href = "/shop"; return; }
+
   document.getElementById("user-email").textContent = me.email;
   document.getElementById("role-badge").textContent = me.role;
   authScreen.classList.add("hidden");
   dashboardScreen.classList.remove("hidden");
 
+  const show = (ids) => ids.forEach((id) => {
+    document.getElementById(id)?.classList.remove("hidden");
+    document.querySelector(`.sidebar-link[data-target="${id}"]`)?.classList.remove("hidden");
+  });
+
   if (me.role === "admin") {
-    ["admin-panel", "design-panel", "interest-panel", "agents-panel", "marketing-panel", "warehouse-panel", "eval-panel", "funnel-panel"].forEach((id) => {
-      document.getElementById(id).classList.remove("hidden");
-    });
-    document.querySelectorAll(".sidebar-link[data-target]").forEach((a) => a.classList.remove("hidden"));
+    show(["admin-panel", "design-panel", "interest-panel", "agents-panel", "marketing-panel", "warehouse-panel", "eval-panel", "funnel-panel", "storefront-panel", "support-panel", "vision-panel", "chat-panel"]);
     loadUsers();
     await checkMockupTemplates();
     loadDesigns();
@@ -71,9 +76,15 @@ async function enterDashboard() {
     loadStatRow();
     loadEvalDashboard();
     loadCheckoutFunnel();
+    loadTickets();
+    loadChatHistory();
+  } else if (me.permissions && me.permissions.includes("tickets")) {
+    // support role: the ticket queue only - no CEO assistant, no design tools, no user admin
+    show(["support-panel"]);
+    document.getElementById("stat-row").classList.add("hidden");
+    loadTickets();
   }
 
-  loadChatHistory();
   setupSidebarScrollspy();
 }
 
@@ -197,7 +208,18 @@ async function loadUsers() {
   if (!res.ok) return;
   const users = await res.json();
   const el = document.getElementById("user-list");
-  el.innerHTML = users.map(u => `<div>${u.email} &mdash; <strong>${u.role}</strong></div>`).join("");
+  el.innerHTML = users.map((u) => `<div>${escapeHtmlAdmin(u.email)} &mdash; <strong>${u.role}</strong>
+    <select class="role-select" data-id="${u.id}" aria-label="Role for ${escapeHtmlAdmin(u.email)}">
+      ${["user", "support", "admin"].map((r) => `<option value="${r}" ${u.role === r ? "selected" : ""}>${r}</option>`).join("")}
+    </select></div>`).join("");
+  el.querySelectorAll(".role-select").forEach((sel) => {
+    sel.addEventListener("change", async () => {
+      const f = new FormData(); f.append("role", sel.value);
+      const r = await fetch(`/api/admin/users/${sel.dataset.id}/role`, { method: "POST", body: f });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.detail || "Couldn't change that role"); }
+      loadUsers();
+    });
+  });
 }
 
 document.getElementById("create-admin-form").onsubmit = async (e) => {
@@ -231,7 +253,7 @@ async function checkMockupTemplates() {
   const missingLabel = (key) => {
     const [garment, color] = key.split(":");
     const labels = { tshirt: "T-Shirt", "long-sleeve": "Full-Sleeve", hoodie: "Hoodie", shorts: "Shorts" };
-    const colorLabels = { white: "White", black: "Black", "heather-gray": "Heather Gray" };
+    const colorLabels = { white: "White", black: "Black", "heather-gray": "Heather Gray", beige: "Beige", sage: "Sage" };
     return `${labels[garment] || garment} · ${colorLabels[color] || color}`;
   };
 
@@ -335,7 +357,7 @@ function designCardHtml(d) {
   const mockupsHtml = mockupTemplatesReady
     ? `<div class="mockup-row">
          ${MOCKUP_SLOTS.map(
-           (slot) => `<img src="/api/admin/design/${d.id}/mockup/${slot}" alt="${slot} mockup" loading="lazy" title="${slot}" />`
+           (slot) => `<img src="/api/admin/design/${d.id}/mockup/${slot}" alt="${slot} mockup" loading="lazy" title="${slot}" onerror="this.remove()" />`
          ).join("")}
        </div>`
     : `<p class="design-sources">Generate mockup templates above to preview this on a shirt.</p>`;
@@ -351,6 +373,8 @@ function designCardHtml(d) {
         <option value="white" ${d.color === "white" || !d.color ? "selected" : ""}>White</option>
         <option value="black" ${d.color === "black" ? "selected" : ""}>Black</option>
         <option value="heather-gray" ${d.color === "heather-gray" ? "selected" : ""}>Heather Gray</option>
+        <option value="beige" ${d.color === "beige" ? "selected" : ""}>Beige</option>
+        <option value="sage" ${d.color === "sage" ? "selected" : ""}>Sage</option>
       </select>
       <button type="button" id="reassign-btn-${d.id}" class="reassign-btn">Change garment/color</button>
     </div>`;
@@ -366,6 +390,7 @@ function designCardHtml(d) {
         ${actions}
         ${mockupsHtml}
         ${reassignHtml}
+        ${d.kind === "plain" ? "" : `<button type="button" class="reassign-btn" onclick="regeneratePhotos(${d.id}, this)">Regenerate AI photos</button>`}
       </div>
     </div>`;
 }
@@ -734,7 +759,7 @@ function drawRelevanceChart(points) {
   const stepX = points.length > 1 ? plotW / (points.length - 1) : 0;
   const toXY = (i, score) => [30 + i * stepX, 10 + plotH * (1 - score / 100)];
 
-  ctx.strokeStyle = "#6a4fb3";
+  ctx.strokeStyle = "#8c5a3c";
   ctx.lineWidth = 2;
   ctx.beginPath();
   points.forEach((p, i) => {
@@ -743,7 +768,7 @@ function drawRelevanceChart(points) {
   });
   ctx.stroke();
 
-  ctx.fillStyle = "#6a4fb3";
+  ctx.fillStyle = "#8c5a3c";
   points.forEach((p, i) => {
     const [x, y] = toXY(i, p.score);
     ctx.beginPath();
@@ -753,33 +778,117 @@ function drawRelevanceChart(points) {
 }
 
 // --- Checkout funnel (demo checkout - app/routes/checkout_routes.py) ---
+const STAGE_LABEL = { opened: "Opened checkout", address: "Entered address", payment: "Reached payment", paid: "Order placed" };
+
 async function loadCheckoutFunnel() {
   const res = await fetch("/api/admin/checkout-funnel/summary");
   if (!res.ok) return;
   const data = await res.json();
 
-  const statRow = document.getElementById("funnel-stat-row");
-  statRow.innerHTML = `
-    <div class="funnel-stat"><strong>${data.opened}</strong><span>Reached checkout</span></div>
-    <div class="funnel-stat"><strong>${data.paid}</strong><span>Completed (demo)</span></div>
-    <div class="funnel-stat"><strong>${data.abandoned}</strong><span>Opened &amp; left</span></div>
-    <div class="funnel-stat"><strong>${data.conversion_pct}%</strong><span>Conversion</span></div>
-  `;
+  document.getElementById("funnel-stat-row").innerHTML = `
+    <div class="funnel-steps">
+      ${data.stages.map((s) => `
+        <div class="funnel-step"><strong>${s.count}</strong><span>${STAGE_LABEL[s.stage]}</span>
+          ${s.dropped_from_prev ? `<em>&minus;${s.dropped_from_prev} dropped</em>` : ""}</div>`).join("")}
+      <div class="funnel-step"><strong>${data.conversion_pct}%</strong><span>Conversion</span></div>
+    </div>`;
 
   const eventsEl = document.getElementById("funnel-events");
-  if (!data.events.length) {
-    eventsEl.innerHTML = '<p class="hint">No checkout activity yet.</p>';
-    return;
-  }
+  if (!data.events.length) { eventsEl.innerHTML = '<p class="hint">No checkout activity yet.</p>'; return; }
   eventsEl.innerHTML = data.events.map((e) => `
     <div class="funnel-event-row">
-      <span class="funnel-stage-badge funnel-stage-${e.stage}">${e.stage === "paid" ? "Completed" : "Opened"}</span>
+      <span class="funnel-stage-badge funnel-stage-${e.stage}">${STAGE_LABEL[e.stage] || e.stage}</span>
       <div class="funnel-event-detail">
-        <p class="funnel-event-user">${e.user_email} <span class="funnel-event-amount">&#8377;${e.amount_inr}</span></p>
-        <p class="funnel-event-design">${e.design_summary}</p>
-        ${e.shipping_name ? `<p class="funnel-event-shipping">${e.shipping_name} &middot; ${e.shipping_address}</p>` : ""}
+        <p class="funnel-event-user">${escapeHtmlAdmin(e.user_email)} <span class="funnel-event-amount">&#8377;${e.amount_inr}</span></p>
+        <p class="funnel-event-design">${escapeHtmlAdmin(e.design_summary)}${e.size ? ` &middot; ${e.size} &times; ${e.quantity}` : ""}${e.payment_method ? ` &middot; ${escapeHtmlAdmin(e.payment_method)}` : ""}</p>
+        ${e.shipping_name ? `<p class="funnel-event-shipping">${escapeHtmlAdmin(e.shipping_name)} &middot; ${escapeHtmlAdmin(e.shipping_address || "")}</p>` : ""}
       </div>
       <span class="funnel-event-time">${new Date(e.created_at).toLocaleString()}</span>
-    </div>
-  `).join("");
+    </div>`).join("");
 }
+
+// --- Support tickets (admin + support roles) ---
+async function loadTickets() {
+  const el = document.getElementById("ticket-list");
+  const res = await fetch("/api/staff/tickets");
+  if (!res.ok) { el.innerHTML = '<p class="hint">You do not have access to tickets.</p>'; return; }
+  const rows = await res.json();
+  if (!rows.length) { el.innerHTML = '<p class="hint">No tickets yet.</p>'; return; }
+  el.innerHTML = rows.map((t) => `
+    <div class="ticket ${t.status}">
+      <div class="ticket-head"><span>#${t.id} &middot; ${escapeHtmlAdmin(t.user_email || "guest")}</span><span>${new Date(t.created_at).toLocaleString()} &middot; ${t.status}</span></div>
+      <p class="ticket-subject">${escapeHtmlAdmin(t.subject)}</p>
+      <p class="hint">${escapeHtmlAdmin(t.message)}</p>
+      ${t.status === "open" ? `<button type="button" class="reassign-btn" data-resolve="${t.id}">Mark resolved</button>` : ""}
+    </div>`).join("");
+  el.querySelectorAll("[data-resolve]").forEach((b) => b.addEventListener("click", async () => {
+    await fetch(`/api/staff/tickets/${b.dataset.resolve}/resolve`, { method: "POST" });
+    loadTickets();
+  }));
+}
+
+// --- Storefront builder: each step is one image/product per request, looped here ---
+async function postJson(url, form) {
+  const r = await fetch(url, { method: "POST", body: form || new FormData() });
+  let d = {}; try { d = await r.json(); } catch {}
+  if (!r.ok) throw new Error(typeof d.detail === "string" ? d.detail : `HTTP ${r.status}`);
+  return d;
+}
+
+async function regeneratePhotos(designId, btn) {
+  btn.disabled = true;
+  try {
+    for (const slot of ["front", "model"]) {
+      btn.textContent = `Making ${slot} photo…`;
+      const f = new FormData(); f.append("slot", slot);
+      await postJson(`/api/admin/design/${designId}/photos`, f);
+    }
+    btn.textContent = "Done — reload the shop";
+  } catch (e) { btn.textContent = "Failed: " + e.message; }
+  finally { btn.disabled = false; loadDesigns(); }
+}
+
+async function runLoop(btn, statusEl, label, items, worker) {
+  btn.disabled = true;
+  let ok = 0, failed = [];
+  for (let i = 0; i < items.length; i++) {
+    statusEl.style.color = "";
+    statusEl.textContent = `${label}: ${i + 1} of ${items.length}…`;
+    try { await worker(items[i]); ok++; } catch (e) { failed.push(e.message); }
+  }
+  statusEl.textContent = items.length === 0
+    ? `${label}: nothing left to do.`
+    : `${label}: ${ok} done${failed.length ? `, ${failed.length} failed (${failed[0]})` : ""}.`;
+  statusEl.style.color = failed.length ? "#c0392b" : "#2e7d32";
+  btn.disabled = false;
+}
+
+document.getElementById("sf-photos-btn").addEventListener("click", async () => {
+  const st = document.getElementById("sf-photos-status");
+  const res = await fetch("/api/admin/photos/status");
+  const data = await res.json();
+  await runLoop(document.getElementById("sf-photos-btn"), st, "AI photos", data.missing, (m) => {
+    const f = new FormData(); f.append("slot", m.slot);
+    return postJson(`/api/admin/design/${m.design_id}/photos`, f);
+  });
+  loadDesigns();
+});
+
+document.getElementById("sf-linen-btn").addEventListener("click", async () => {
+  const st = document.getElementById("sf-linen-status");
+  const data = await (await fetch("/api/admin/linen/status")).json();
+  const todo = data.items.filter((i) => !i.created);
+  await runLoop(document.getElementById("sf-linen-btn"), st, "Linen shirts", todo, (i) => postJson(`/api/admin/linen/create/${i.index}`));
+  loadDesigns();
+});
+
+document.getElementById("sf-brand-btn").addEventListener("click", async () => {
+  const st = document.getElementById("sf-brand-status");
+  const force = document.getElementById("sf-brand-force").checked;
+  const data = await (await fetch("/api/admin/brand/status")).json();
+  const todo = data.assets.filter((a) => force || !a.created);
+  await runLoop(document.getElementById("sf-brand-btn"), st, "Brand images", todo, (a) => {
+    const f = new FormData(); f.append("force", force ? "true" : "false");
+    return postJson(`/api/admin/brand/generate/${a.key}`, f);
+  });
+});

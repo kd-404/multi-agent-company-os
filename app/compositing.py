@@ -72,13 +72,21 @@ def _remove_background(design: Image.Image, threshold: int = 24) -> Image.Image:
 
 def _shade_onto_fabric(design_rgba: Image.Image, template_region: Image.Image) -> Image.Image:
     """
-    Makes the flat design pick up the template photo's own lighting/wrinkles
-    instead of sitting on top like a sticker: multiplies the design's RGB by
-    the template region's grayscale luminance, keeping the design's own
-    alpha mask.
+    Makes the flat design pick up the template photo's folds and lighting
+    instead of sitting on top like a sticker.
+
+    The old version multiplied the design by the fabric's ABSOLUTE
+    brightness - fine on white cotton, but on black/dark fabric (luminance
+    near 0) it multiplied the whole design to near-black, so prints simply
+    vanished on black hoodies. This version normalizes by the region's own
+    average brightness: only the folds/highlights (relative variation)
+    modulate the print, never the garment's base color.
     """
-    shadow_map = template_region.convert("L").convert("RGB")
-    shaded_rgb = ImageChops.multiply(design_rgba.convert("RGB"), shadow_map)
+    lum = template_region.convert("L")
+    mean = max(sum(lum.getdata()) / max(1, lum.width * lum.height), 1.0)
+    # region average -> 240/255 (almost no darkening), folds darker/lighter around it
+    shade = lum.point(lambda v: max(165, min(255, int(240 * v / mean))))
+    shaded_rgb = ImageChops.multiply(design_rgba.convert("RGB"), shade.convert("RGB"))
     shaded = shaded_rgb.convert("RGBA")
     shaded.putalpha(design_rgba.getchannel("A"))
     return shaded

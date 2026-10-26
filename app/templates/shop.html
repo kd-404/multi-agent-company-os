@@ -1,216 +1,98 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Loomwell — clothing written by machines</title>
-<meta name="description" content="Loomwell designs are generated from live trend research by an AI design agent, reviewed by a human, then printed. Browse the current collection." />
-<link rel="preconnect" href="https://api.fontshare.com" />
-<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=general-sans@400,500,600&display=swap" />
-<link rel="stylesheet" href="/static/shop.css?v={{ asset_version }}" />
-</head>
-<body>
+{% extends "base_shop.html" %}
+{% block content %}
 
-  <header class="topbar">
-    <a href="/shop" class="wordmark">Loomwell</a>
+<section class="hero" id="hero">
+  <div class="hero-copy">
+    <p class="hero-script">The linen edit</p>
+    <h1>Soft, earthy, <em>easily</em> worn.</h1>
+    <p class="lead">White shirts, sand-coloured trousers and the kind of cloth that gets better with every wash. Plus tees printed with ideas researched by AI and approved by a person.</p>
+    <div class="hero-cta">
+      <a href="#linen" class="btn btn-dark">Shop linen shirts</a>
+      <a href="/studio" class="btn btn-ghost">Print your own</a>
+    </div>
+  </div>
+</section>
 
-    <form class="topbar-search" id="topbar-search-form">
-      <input type="text" id="topbar-search-input" placeholder="Search designs — try &quot;floral&quot;, &quot;retro&quot;, &quot;minimalist&quot;&hellip;" aria-label="Search the collection" />
-      <button type="submit" aria-label="Search">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      </button>
+<section class="quotes" aria-label="Quotes">
+  <blockquote>“Wear the day slowly.”<cite>Loomwell</cite></blockquote>
+  <blockquote>“Good cloth remembers the sun.”<cite>Loomwell</cite></blockquote>
+  <blockquote>“Dust on the boots, linen on the shoulders.”<cite>Loomwell</cite></blockquote>
+</section>
+
+<section class="section" id="linen">
+  <div class="banner" id="banner-shirts" style="min-height:260px"></div>
+  <div class="section-head">
+    <div><p class="script">Shirts</p><h2>The Linen Edit</h2></div>
+    <p>Washed linen in sand, ivory and sage. Cut loose, made to be rolled at the sleeve.</p>
+  </div>
+  <div class="grid" id="linen-grid"><p class="grid-empty">Loading…</p></div>
+</section>
+
+<section class="section farm" id="farm">
+  <div class="section-head">
+    <div><p class="script">Out in the field</p><h2>The farm edit</h2></div>
+    <p>A little vintage, a lot of horses. Our slow-season mood board, shot in warm film light.</p>
+  </div>
+  <div class="farm-grid">
+    <figure class="farm-card" id="farm-1"><figcaption>Where the road turns to wheat.</figcaption></figure>
+    <figure class="farm-card" id="farm-2"><figcaption>Slow mornings, steady horses.</figcaption></figure>
+    <figure class="farm-card" id="farm-3"><figcaption>Some friendships need no saddle.</figcaption></figure>
+  </div>
+</section>
+
+<section class="section section-alt" id="tees">
+  <div class="banner" id="banner-tees" style="min-height:240px"></div>
+  <div class="section-head">
+    <div><p class="script">Tees &amp; more</p><h2>Printed pieces</h2></div>
+    <p>Each print started as a live trend search, was drawn by our design agent, and was approved by a human before it went on sale.</p>
+  </div>
+  <div class="filter-row" id="type-filters" role="group" aria-label="Filter by type">
+    <button class="fchip active" data-type="all">All</button>
+    <button class="fchip" data-type="T-Shirt">T-shirts</button>
+    <button class="fchip" data-type="Hoodie">Hoodies</button>
+    <button class="fchip" data-type="Full-Sleeve Shirt">Full-sleeve</button>
+    <button class="fchip" data-type="Shorts">Shorts</button>
+  </div>
+  <div class="grid" id="tees-grid"><p class="grid-empty">Loading…</p></div>
+</section>
+
+<section class="section">
+  <div class="studio-band">
+    <div class="studio-copy">
+      <p class="script">Make it yours</p>
+      <h2>Print your own design</h2>
+      <p class="muted">Upload your artwork or pattern — or just describe an idea and our image agent will draw it. Pick a tee, hoodie or full-sleeve and a colour, see it on the garment, then order it.</p>
+      <ul><li>Upload a PNG, JPG or WebP</li><li>Or describe it and let AI draw it</li><li>Preview on the actual garment</li></ul>
+      <div><a href="/studio" class="btn btn-dark">Open the studio</a></div>
+    </div>
+    <div class="studio-photo" id="banner-studio"></div>
+  </div>
+</section>
+
+<section class="section section-alt" id="search">
+  <div class="search-box">
+    <div>
+      <p class="script-sub">Spotted something?</p>
+      <h2 style="font-size:clamp(30px,4vw,46px);margin:4px 0 8px">Find it by photo</h2>
+      <p class="muted">Upload a picture of a print or a shirt you like and we'll match it against what's in stock.</p>
+    </div>
+    <form id="search-form">
+      <label for="search-file" class="dropzone" id="search-dropzone"><span id="search-dropzone-label">Drop a photo here, or click to choose<small>JPG, PNG or WebP</small></span></label>
+      <input type="file" id="search-file" accept="image/*" hidden />
+      <div class="search-actions"><button type="submit" id="search-submit" class="btn btn-dark" disabled>Find matches</button></div>
     </form>
-
-    <div class="topbar-actions">
-      <button type="button" class="account-corner" id="account-corner">
-        <span class="account-line-1" id="account-line-1">Hello, sign in</span>
-        <span class="account-line-2">Account</span>
-      </button>
-      <button type="button" class="cart-corner" id="cart-corner">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-        <span class="cart-label">Cart</span>
-        <div class="cart-popover" id="cart-popover" hidden>Checkout is coming soon — the collection is browsable, not yet purchasable.</div>
-      </button>
-      <a href="/" class="nav-admin">Admin</a>
-    </div>
-  </header>
-
-  <div class="agent-bar">
-    <p class="hero-status" id="hero-status" aria-live="polite"></p>
   </div>
+  <div class="grid" id="search-results" hidden></div>
+</section>
 
-  <nav class="category-strip">
-    <a href="#collection" class="category-chip active">All</a>
-    <a href="#collection" class="category-chip">T-Shirts</a>
-    <span class="category-chip disabled">Pants <em>Soon</em></span>
-    <a href="#search" class="category-chip">Find by photo</a>
-    <a href="#process" class="category-chip">How it's made</a>
-  </nav>
-
-  <main>
-    <section class="hero">
-      <div class="hero-copy">
-        <span class="hero-eyebrow">AI-researched &middot; human-approved</span>
-        <h1 class="hero-title">Clothing,<br />written by<br />machines.</h1>
-        <p class="hero-sub">
-          Every design here started as a live search across what people are actually
-          wearing right now, then became a print. A human signs off before anything
-          goes up — the research and the artwork are the machine's.
-        </p>
-        <a href="#collection" class="cta">See the collection</a>
-      </div>
-      <div class="hero-visual">
-        <div class="tilt-stage" id="hero-tilt">
-          <div class="tilt-glow"></div>
-          <img id="hero-image" class="tilt-image" alt="" />
-        </div>
-      </div>
-    </section>
-
-    <section class="trust-strip" aria-label="How Loomwell works, in numbers">
-      <div class="trust-item"><strong>100%</strong><span>Live trend research</span></div>
-      <div class="trust-item"><strong>0</strong><span>Stock photos used</span></div>
-      <div class="trust-item"><strong>1&times;</strong><span>Human review per piece</span></div>
-      <div class="trust-item"><strong>24/7</strong><span>Agents watching trends</span></div>
-    </section>
-
-    <section class="search" id="search">
-      <div class="search-box">
-        <div class="search-copy">
-          <h2>Find something like it</h2>
-          <p>Got a photo of a design you like? Upload it and we'll match it against the collection.</p>
-        </div>
-        <form id="search-form" class="search-form">
-          <label for="search-file" class="search-dropzone" id="search-dropzone">
-            <span id="search-dropzone-label">Choose a photo</span>
-          </label>
-          <input type="file" id="search-file" accept="image/*" hidden />
-          <button type="submit" id="search-submit" disabled>Find matches</button>
-        </form>
-      </div>
-      <div class="grid" id="search-results" hidden></div>
-    </section>
-
-    <section class="collection" id="collection">
-      <div class="collection-head">
-        <h2>The Collection</h2>
-        <p id="collection-count" class="collection-count"></p>
-      </div>
-      <div class="collection-layout">
-        <aside class="filters-sidebar" aria-label="Filter the collection">
-          <div class="filter-group">
-            <h3>Garment</h3>
-            <label class="filter-option"><input type="checkbox" class="filter-garment" value="T-Shirt" /> T-Shirt</label>
-            <label class="filter-option"><input type="checkbox" class="filter-garment" value="Full-Sleeve Shirt" /> Full-Sleeve</label>
-            <label class="filter-option"><input type="checkbox" class="filter-garment" value="Hoodie" /> Hoodie</label>
-          </div>
-          <div class="filter-group">
-            <h3>Color</h3>
-            <label class="filter-option"><input type="checkbox" class="filter-color" value="White" /> White</label>
-            <label class="filter-option"><input type="checkbox" class="filter-color" value="Black" /> Black</label>
-            <label class="filter-option"><input type="checkbox" class="filter-color" value="Heather Gray" /> Heather Gray</label>
-          </div>
-          <button type="button" id="filters-clear" class="hidden">Clear filters</button>
-        </aside>
-        <div class="grid" id="product-grid"></div>
-      </div>
-    </section>
-
-    <section class="process" id="process">
-      <h2>How a Loomwell design happens</h2>
-      <div class="process-steps">
-        <div class="process-step">
-          <h3>Research</h3>
-          <p>An agent searches the live web for what's trending in graphic apparel right now — not a fixed style guide.</p>
-        </div>
-        <div class="process-step">
-          <h3>Render</h3>
-          <p>That research becomes a prompt, and the prompt becomes an original print-ready graphic.</p>
-        </div>
-        <div class="process-step">
-          <h3>Review</h3>
-          <p>A human looks at every single piece before it's approved. Nothing ships unseen.</p>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="footer-grid">
-      <div class="footer-col">
-        <p class="footer-heading">Loomwell</p>
-        <a href="#collection">The collection</a>
-        <a href="#search">Find by photo</a>
-        <a href="#process">How it's made</a>
-      </div>
-      <div class="footer-col">
-        <p class="footer-heading">Account</p>
-        <button type="button" class="footer-link-btn" id="footer-account-btn">Sign in / Create account</button>
-        <a href="/">Admin dashboard</a>
-      </div>
-    </div>
-    <p class="footer-bottom">Loomwell — designed by AI agents, approved by a human.</p>
-  </footer>
-
-  <div class="modal-backdrop" id="modal-backdrop" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
-      <div class="modal-visual">
-        <img id="modal-image" alt="" />
-        <div class="modal-tabs" id="modal-tabs"></div>
-      </div>
-      <div class="modal-info">
-        <h3 id="modal-title">Design</h3>
-        <p id="modal-summary"></p>
-        <p class="modal-sources" id="modal-sources"></p>
-        <a href="/shop" id="modal-detail-link" class="modal-detail-link">View full page &rarr;</a>
-      </div>
-    </div>
+<section class="section" id="process">
+  <div class="section-head"><div><p class="script">Behind the seams</p><h2>How a Loomwell piece happens</h2></div></div>
+  <div class="process-steps">
+    <div class="process-step"><h3>Trend research</h3><p>An agent searches what people are actually wearing and reading right now.</p></div>
+    <div class="process-step"><h3>Design</h3><p>An image model turns the research into original artwork — never copied from a brand.</p></div>
+    <div class="process-step"><h3>Human review</h3><p>A person approves every design before it goes on sale. Nothing ships unreviewed.</p></div>
+    <div class="process-step"><h3>Photographed</h3><p>Each piece gets product and worn photos, checked by a vision model for the right garment and colour.</p></div>
   </div>
-
-  <div class="modal-backdrop" id="account-backdrop" hidden>
-    <div class="modal account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
-      <button class="modal-close" id="account-modal-close" aria-label="Close">&times;</button>
-      <div class="account-modal-body">
-        <h3 id="account-modal-title">Account</h3>
-
-        <div class="account-signed-in hidden" id="account-signed-in">
-          <p>Signed in as <strong id="account-email"></strong>.</p>
-          <button type="button" id="account-sign-out">Sign out</button>
-        </div>
-
-        <div id="account-signed-out">
-          <div class="tabs">
-            <button type="button" id="account-tab-login" class="tab active">Sign in</button>
-            <button type="button" id="account-tab-register" class="tab">Create account</button>
-          </div>
-
-          <form id="account-login-form">
-            <input type="email" name="email" placeholder="Email" required />
-            <input type="password" name="password" placeholder="Password" required />
-            <button type="submit">Sign in</button>
-            <p class="error" id="account-login-error"></p>
-          </form>
-
-          <form id="account-register-form" class="hidden">
-            <input type="email" name="email" placeholder="Email" required />
-            <input type="password" name="password" placeholder="Password" required />
-            <button type="submit">Create account</button>
-            <p class="error" id="account-register-error"></p>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="cookie-banner" id="cookie-banner" hidden>
-    <p>Loomwell uses a small cookie to remember your session and site preferences. No ads, no tracking.</p>
-    <div class="cookie-actions">
-      <button id="cookie-decline" class="cookie-decline">Decline</button>
-      <button id="cookie-accept" class="cookie-accept">Accept</button>
-    </div>
-  </div>
-
-  <script src="/static/shop.js?v={{ asset_version }}"></script>
-</body>
-</html>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/shop.js?v={{ asset_version }}"></script>{% endblock %}

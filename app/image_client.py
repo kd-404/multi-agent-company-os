@@ -76,3 +76,26 @@ def generate_image(prompt: str, size: str = "1024x1024") -> bytes:
     # gpt-image-1/1.5 series always return base64, never a URL.
     import base64
     return base64.b64decode(result.data[0].b64_json)
+
+
+def edit_image(prompt: str, reference_png: bytes, size: str = "1024x1024") -> bytes:
+    """
+    Image EDIT call: the model sees `reference_png` (e.g. a finished print
+    design) plus the prompt and produces a new image that uses it - this is
+    how a design gets put onto a garment photographically, instead of being
+    pasted on with Pillow. Same retry/backoff policy as generate_image.
+    """
+    client = get_image_client()
+
+    def _call():
+        return client.images.edit(
+            model=settings.FOUNDRY_IMAGE_DEPLOYMENT,
+            image=("design.png", reference_png, "image/png"),
+            prompt=prompt,
+            size=size,
+            n=1,
+        )
+
+    result = with_retry(_call, label="image_edit", retryable=_is_retryable_openai_error)
+    import base64
+    return base64.b64decode(result.data[0].b64_json)

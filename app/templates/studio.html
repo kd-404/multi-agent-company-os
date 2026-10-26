@@ -1,0 +1,65 @@
+{% extends "base_shop.html" %}
+{% block title %}Print your own — Loomwell{% endblock %}
+{% block content %}
+<section class="studio-wrap">
+  <div>
+    <p class="script-sub">The studio</p>
+    <h1>Print your own design</h1>
+    <p class="muted">Upload your artwork or pattern, or describe an idea and let our image agent draw it. Then choose the garment and see it before you order.</p>
+
+    <div class="panel">
+      <h3>1 · Your artwork</h3>
+      <div class="seg" role="tablist">
+        <button type="button" class="active" id="mode-upload" role="tab">Upload an image</button>
+        <button type="button" id="mode-ai" role="tab">Describe it (AI)</button>
+      </div>
+      <form id="upload-form" class="stack">
+        <label for="art-file" class="dropzone" id="art-dropzone"><span id="art-label">Drop your image here, or click to choose<small>PNG, JPG or WebP · up to 8 MB · artwork with a plain background works best</small></span></label>
+        <input type="file" id="art-file" accept="image/png,image/jpeg,image/webp" hidden />
+        <button type="submit" class="btn btn-dark" id="upload-btn" disabled>Use this image</button>
+      </form>
+      <form id="ai-form" class="stack hidden">
+        <textarea id="ai-prompt" rows="3" maxlength="300" placeholder="e.g. a chestnut horse at sunrise in a minimalist line-art style, warm brown tones"></textarea>
+        <button type="submit" class="btn btn-clay" id="ai-btn">Create with AI</button>
+        <p class="muted" style="font-size:13px">Original ideas only — no real people, brands or characters. Up to <span id="ai-limit">5</span> AI designs per day.</p>
+      </form>
+      <p class="form-error" id="studio-error" role="alert"></p>
+    </div>
+
+    <div class="panel">
+      <h3>2 · Garment &amp; colour</h3>
+      <span class="field-label" style="margin-top:10px">Style</span>
+      <div class="swatches" id="garment-opts"></div>
+      <span class="field-label">Colour</span>
+      <div class="swatches" id="color-opts"></div>
+    </div>
+
+    <div class="panel hidden" id="mine-panel">
+      <h3>Your designs</h3>
+      <div class="mine-grid" id="mine-grid"></div>
+    </div>
+  </div>
+
+  <aside class="preview-card" aria-label="Preview">
+    <div class="preview-stage" id="preview-stage">
+      <div class="preview-empty" id="preview-empty"><span class="script">your design here</span>Add artwork to see it on the garment.</div>
+      <img id="preview-img" alt="Preview of your design on the garment" hidden />
+      <div class="preview-loading hidden" id="preview-loading"><div class="spinner"></div><span id="preview-loading-text">Working…</span></div>
+    </div>
+    <div class="preview-tabs hidden" id="preview-tabs">
+      <button type="button" class="fchip active" data-view="flat">Flat preview</button>
+      <button type="button" class="fchip" data-view="model">On a model</button>
+      <button type="button" class="fchip hidden" data-view="photo">AI photo</button>
+    </div>
+    <div class="preview-meta">
+      <div><strong id="preview-title">Custom print</strong><div class="muted" id="preview-sub" style="font-size:14px"></div></div>
+      <div style="font-size:22px;font-family:var(--serif)" id="preview-price"></div>
+    </div>
+    <div class="stack" style="margin-top:14px">
+      <button type="button" class="btn btn-ghost hidden" id="photo-btn">Generate a realistic AI photo</button>
+      <button type="button" class="btn btn-dark btn-block" id="order-btn" disabled>Order this design</button>
+    </div>
+  </aside>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/studio.js?v={{ asset_version }}"></script>{% endblock %}

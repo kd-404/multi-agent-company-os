@@ -21,11 +21,19 @@ import logging
 from fastapi import APIRouter, Depends, Form, HTTPException, Response
 from sqlalchemy.orm import Session
 
-from ..db import get_db, Design, MockupTemplate, User
+from ..db import get_db, Design, MockupTemplate, ProductPhoto, User
 from ..auth import require_admin
 from ..image_client import generate_image
 from ..compositing import composite_mockup
-from ..garments import GARMENTS, COLORS, DEFAULT_GARMENT, DEFAULT_COLOR
+from ..garments import GARMENTS, COLORS, DEFAULT_GARMENT, DEFAULT_COLOR, all_combos
+
+
+def template_combos() -> list[tuple[str, str]]:
+    """Combos that need a blank-garment template photo: printable garments
+    only (the linen shirts are sold plain, so their photos are made per
+    product, not composited)."""
+    return [(g, c) for g, c in all_combos() if GARMENTS[g]["printable"]]
+
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -124,8 +132,8 @@ def generate_templates(
     already_have = set() if force else _existing_combos(db)
 
     results = {}
-    for garment in GARMENTS:
-        for color in COLORS:
+    for garment, color in template_combos():
+        if True:
             for slot in SLOTS:
                 key = f"{garment}:{color}:{slot}"
                 if (garment, color, slot) in already_have:
@@ -174,8 +182,8 @@ def list_templates(db: Session = Depends(get_db), _admin: User = Depends(require
     by_combo = {(t.garment, t.color, t.slot): t.id for t in rows}
 
     matrix = {}
-    for garment in GARMENTS:
-        for color in COLORS:
+    for garment, color in template_combos():
+        if True:
             for slot in SLOTS:
                 generated = (garment, color, slot) in by_combo
                 matrix[f"{garment}:{color}:{slot}"] = {
@@ -198,11 +206,10 @@ def list_templates(db: Session = Depends(get_db), _admin: User = Depends(require
     # resolve_design_template below). Surfacing this list is what makes
     # that failure visible instead of silent.
     missing_combos: dict[str, list[str]] = {}
-    for garment in GARMENTS:
-        for color in COLORS:
-            missing_slots = [slot for slot in SLOTS if not matrix[f"{garment}:{color}:{slot}"]["generated"]]
-            if missing_slots:
-                missing_combos[f"{garment}:{color}"] = missing_slots
+    for garment, color in template_combos():
+        missing_slots = [slot for slot in SLOTS if not matrix[f"{garment}:{color}:{slot}"]["generated"]]
+        if missing_slots:
+            missing_combos[f"{garment}:{color}"] = missing_slots
 
     return {
         "matrix": matrix,
@@ -236,6 +243,8 @@ def design_mockup_matches_garment(design: Design, db: Session) -> bool:
     Studio can flag "this one's still showing a stand-in photo" instead of
     letting a mismatched mockup look identical to a correct one.
     """
+    if db.query(ProductPhoto).filter(ProductPhoto.design_id == design.id, ProductPhoto.slot == "front").first():
+        return True  # an AI product photo of this exact garment/color exists
     garment = design.garment or DEFAULT_GARMENT
     color = design.color or DEFAULT_COLOR
     count = (
@@ -278,6 +287,10 @@ def get_design_mockup(
     design = db.query(Design).filter(Design.id == design_id).first()
     if not design:
         raise HTTPException(status_code=404, detail="Design not found")
+
+    photo = db.query(ProductPhoto).filter(ProductPhoto.design_id == design.id, ProductPhoto.slot == slot).first()
+    if photo:
+        return Response(content=photo.image_data, media_type="image/png")
 
     template = resolve_design_template(design, slot, db)
     if not template:

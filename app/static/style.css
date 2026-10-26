@@ -154,7 +154,7 @@ button:hover { opacity: 0.9; }
   margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border);
 }
 #batch-generate-btn {
-  background: #6a4fb3; width: 100%;
+  background: #8c5a3c; width: 100%;
 }
 #batch-generate-btn:disabled { opacity: 0.6; cursor: wait; }
 #batch-generate-status { color: #2e7d32; }
@@ -244,7 +244,7 @@ button:hover { opacity: 0.9; }
 .agent-card.status-ok { border-left-color: #2e7d32; }
 .agent-card.status-alert { border-left-color: #b8860b; }
 .agent-card.status-error { border-left-color: #c0392b; }
-.agent-card.status-simulated { border-left-color: #6a4fb3; }
+.agent-card.status-simulated { border-left-color: #8c5a3c; }
 .agent-card.status-idle { border-left-color: var(--border); }
 
 #run-demo-btn { background: #2e7d32; width: 100%; margin-top: 6px; }
@@ -262,11 +262,11 @@ button:hover { opacity: 0.9; }
 .feed-time { color: var(--muted); flex-shrink: 0; font-size: 11px; }
 .feed-row.status-alert .feed-agent { color: #b8860b; }
 .feed-row.status-error .feed-agent { color: #c0392b; }
-.feed-row.status-simulated .feed-agent { color: #6a4fb3; }
+.feed-row.status-simulated .feed-agent { color: #8c5a3c; }
 
 /* --- Marketing agent --- */
 #marketing-panel { grid-column: span 2; }
-#scan-trends-btn { background: #6a4fb3; }
+#scan-trends-btn { background: #8c5a3c; }
 #scan-trends-status { color: var(--muted); font-size: 12.5px; }
 .marketing-row {
   display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border);
@@ -282,7 +282,7 @@ button:hover { opacity: 0.9; }
 }
 .marketing-caption { margin: 0 0 4px; font-size: 13px; color: var(--text); font-weight: 500; }
 .marketing-hashtags { margin: 0; font-size: 12px; color: var(--navy); }
-.draft-caption-btn { background: #6a4fb3; padding: 6px 12px; font-size: 12px; }
+.draft-caption-btn { background: #8c5a3c; padding: 6px 12px; font-size: 12px; }
 .schedule-post-btn { background: #d6249f; padding: 6px 12px; font-size: 12px; margin-left: 6px; }
 .schedule-post-status { margin: 6px 0 0; font-size: 11.5px; color: var(--muted); }
 
@@ -368,3 +368,18 @@ button:hover { opacity: 0.9; }
 .funnel-event-design { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
 .funnel-event-shipping { margin: 2px 0 0; font-size: 11.5px; color: var(--muted); font-style: italic; }
 .funnel-event-time { flex-shrink: 0; font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+.sf-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.sf-check { display: block; font-size: 13px; margin-top: 6px; color: var(--muted); }
+.ticket-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.ticket { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: #fff; }
+.ticket.resolved { opacity: .6; }
+.ticket-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
+.ticket-subject { font-weight: 600; margin: 4px 0; }
+.role-select { font-size: 12px; margin-left: 8px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; }
+.funnel-steps { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.funnel-step { flex: 1 1 120px; padding: 10px 12px; border-radius: 10px; background: #f6efe4; }
+.funnel-step strong { display: block; font-size: 22px; }
+.funnel-step span { font-size: 12px; color: var(--muted); }
+.funnel-step em { display: block; font-style: normal; font-size: 12px; color: #b5701f; margin-top: 2px; }
+.funnel-stage-address, .funnel-stage-payment { background: #e3eefc; color: #1d4e89; }

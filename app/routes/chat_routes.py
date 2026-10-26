@@ -1,5 +1,11 @@
 """
-CEO chatbot endpoint. Talks to the "ceo-assistant" agent built in the
+CEO chatbot endpoint - INTERNAL, admin-only (permission "ceo_chat"): its
+knowledge base is the project-status/team docs, which customers must never
+see. Customers get the separate, catalog-grounded shop assistant in
+assistant_routes.py.
+
+Original notes:
+ Talks to the "ceo-assistant" agent built in the
 New Microsoft Foundry portal, which has File Search over the project-status
 and people docs (the RAG layer: it answers from those docs and cites them).
 
@@ -20,7 +26,7 @@ from azure.identity import DefaultAzureCredential
 
 from ..config import settings
 from ..db import get_db, ChatMessage
-from ..auth import get_current_user
+from ..auth import require_permission
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -71,7 +77,7 @@ def _ask_agent(user_id: int, text: str) -> str:
 def chat(
     message: str = Form(...),
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_permission("ceo_chat")),
 ):
     try:
         reply_text = _ask_agent(user.id, message)
@@ -88,7 +94,7 @@ def chat(
 
 
 @router.get("/api/chat/history")
-def chat_history(db: Session = Depends(get_db), user=Depends(get_current_user)):
+def chat_history(db: Session = Depends(get_db), user=Depends(require_permission("ceo_chat"))):
     rows = (
         db.query(ChatMessage)
         .filter(ChatMessage.user_id == user.id)

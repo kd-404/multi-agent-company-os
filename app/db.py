@@ -88,6 +88,80 @@ class Design(Base):
     garment = Column(String(20), nullable=True)
     color = Column(String(20), nullable=True)
 
+    # --- Catalog fields ---
+    # kind: "print" (AI-designed graphic, the original product) or "plain"
+    # (a no-graphic garment like the linen shirts - image_data is then its
+    # own front product photo). title/price_inr are optional overrides; when
+    # null the catalog derives a title from the Vision tags and uses the
+    # default print price (app/catalog.py).
+    kind = Column(String(20), nullable=True, default="print")
+    title = Column(String(160), nullable=True)
+    price_inr = Column(Integer, nullable=True)
+
+
+class ProductPhoto(Base):
+    """
+    AI-generated product photo for one design + slot ("front" flat lay or
+    "model" worn shot), made by the image model's EDIT endpoint with the
+    design as the reference image and an art-directed prompt
+    (app/product_photos.py). Preferred over the Pillow composite whenever
+    it exists, because the model actually wraps the print onto the fabric,
+    keeps it legible on dark colors and frames it correctly per garment.
+    """
+    __tablename__ = "product_photos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    design_id = Column(Integer, nullable=False, index=True)
+    slot = Column(String(20), nullable=False)
+    image_data = Column(LargeBinary, nullable=False)
+    source = Column(String(20), nullable=False, default="ai")
+    verified = Column(Integer, nullable=True)   # 1 = Vision confirmed garment/color, 0 = mismatch, null = couldn't check
+    caption = Column(Text, nullable=True)       # what Vision saw, for the audit trail
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class BrandAsset(Base):
+    """Storefront imagery (hero model, vintage farm shots, banners) generated
+    once from the admin panel and served at /api/public/brand/{key}."""
+    __tablename__ = "brand_assets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(40), unique=True, nullable=False, index=True)
+    image_data = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class CustomDesign(Base):
+    """A shopper's own "print your own" design (uploaded art or AI-generated
+    from their description) on a chosen garment/color. Private to its owner
+    - never appears in the public catalog."""
+    __tablename__ = "custom_designs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    garment = Column(String(20), nullable=False, default="tshirt")
+    color = Column(String(20), nullable=False, default="white")
+    source = Column(String(20), nullable=False, default="upload")  # upload | ai
+    prompt = Column(Text, nullable=True)
+    image_data = Column(LargeBinary, nullable=False)
+    preview_data = Column(LargeBinary, nullable=True)   # AI "worn" preview, made on request
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class SupportTicket(Base):
+    """Customer-support queue, fed by the shop assistant and the contact
+    form; worked by users with the "tickets" permission (admin/support)."""
+    __tablename__ = "support_tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=True, index=True)
+    user_email = Column(String(255), nullable=True)
+    subject = Column(String(200), nullable=False)
+    message = Column(Text, nullable=False)
+    design_id = Column(Integer, nullable=True)
+    status = Column(String(20), nullable=False, default="open")  # open | resolved
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
 
 class MockupTemplate(Base):
     """
@@ -215,7 +289,8 @@ class CheckoutEvent(Base):
     user's email and the design/amount involved - no separate guest-
     identity system, since buying already requires being logged in.
 
-    stage: "opened" | "paid"
+    stage: "opened" | "address" | "payment" | "paid" (the four steps of the
+    checkout page, so drop-off can be seen step by step)
     """
     __tablename__ = "checkout_events"
 
@@ -227,6 +302,10 @@ class CheckoutEvent(Base):
     amount_inr = Column(Integer, nullable=False)
     shipping_name = Column(String(200), nullable=True)
     shipping_address = Column(Text, nullable=True)
+    item_kind = Column(String(20), nullable=True, default="design")  # design | custom
+    payment_method = Column(String(30), nullable=True)
+    size = Column(String(10), nullable=True)
+    quantity = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -274,6 +353,17 @@ def _run_lightweight_migrations():
             "social_hashtags": "VARCHAR(400)",
             "garment": "VARCHAR(20)",
             "color": "VARCHAR(20)",
+            "kind": "VARCHAR(20) DEFAULT 'print'",
+            "title": "VARCHAR(160)",
+            "price_inr": "INTEGER",
+        })
+
+    if "checkout_events" in table_names:
+        _add_missing_columns("checkout_events", {
+            "item_kind": "VARCHAR(20) DEFAULT 'design'",
+            "payment_method": "VARCHAR(30)",
+            "size": "VARCHAR(10)",
+            "quantity": "INTEGER",
         })
 
     if "mockup_templates" in table_names:

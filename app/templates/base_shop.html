@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{% block title %}Loomwell — linen, cotton & made-to-order prints{% endblock %}</title>
+<meta name="description" content="{% block description %}Earthy linen shirts, soft cotton tees and prints researched by AI design agents and approved by a human. Or print your own.{% endblock %}" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Allura&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap" />
+<link rel="stylesheet" href="/static/shop.css?v={{ asset_version }}" />
+{% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{% block header %}
+  <div class="announce" role="note">Free delivery over ₹999 &nbsp;·&nbsp; 7-day easy returns &nbsp;·&nbsp; Use code <strong>WELCOME10</strong> for 10% off</div>
+
+  <header class="site-header">
+    <button type="button" class="icon-btn menu-btn" id="menu-btn" aria-label="Menu" aria-expanded="false">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
+    </button>
+    <a href="/shop" class="wordmark" aria-label="Loomwell home">Loomwell</a>
+    <nav class="main-nav" id="main-nav" aria-label="Main">
+      <a href="/shop#linen">Linen shirts</a>
+      <a href="/shop#tees">T-shirts</a>
+      <a href="/shop#farm">The farm edit</a>
+      <a href="/studio" class="nav-cta">Print your own</a>
+      <a href="/shop#search">Find by photo</a>
+    </nav>
+    <div class="header-actions">
+      <button type="button" class="icon-btn" id="open-assistant" aria-label="Chat with the shop assistant">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
+      </button>
+      <button type="button" class="account-btn" id="account-corner">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        <span id="account-line-1">Sign in</span>
+      </button>
+    </div>
+  </header>
+{% endblock %}
+
+<main id="main">
+{% block content %}{% endblock %}
+</main>
+
+{% block footer %}
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div>
+        <p class="footer-brand">Loomwell</p>
+        <p class="footer-blurb">Linen, cotton and quiet prints. Designed with AI agents, approved by a human, made slowly.</p>
+      </div>
+      <div>
+        <p class="footer-h">Shop</p>
+        <a href="/shop#linen">Linen shirts</a>
+        <a href="/shop#tees">T-shirts &amp; hoodies</a>
+        <a href="/studio">Print your own</a>
+        <a href="/shop#search">Find by photo</a>
+      </div>
+      <div>
+        <p class="footer-h">Help</p>
+        <button type="button" class="link-btn" data-open-assistant>Chat with us</button>
+        <button type="button" class="link-btn" data-open-assistant data-prompt="What is your return policy?">Returns</button>
+        <button type="button" class="link-btn" data-open-assistant data-prompt="How long does delivery take?">Delivery</button>
+      </div>
+      <div>
+        <p class="footer-h">Account</p>
+        <button type="button" class="link-btn" id="footer-account-btn">Sign in / Create account</button>
+        <a href="/">Staff dashboard</a>
+      </div>
+    </div>
+    <p class="footer-bottom">© Loomwell · A portfolio project — checkout is a demo and no payment is ever taken.</p>
+  </footer>
+{% endblock %}
+
+<!-- Account -->
+<div class="modal-backdrop" id="account-backdrop" hidden>
+  <div class="modal account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
+    <button class="modal-close" id="account-modal-close" aria-label="Close">&times;</button>
+    <h3 id="account-modal-title" class="modal-title">Welcome</h3>
+    <div class="hidden" id="account-signed-in">
+      <p class="muted">Signed in as <strong id="account-email"></strong></p>
+      <div class="stack">
+        <a class="btn btn-ghost" href="/studio">My custom designs</a>
+        <a class="btn btn-ghost hidden" id="account-staff-link" href="/">Open staff dashboard</a>
+        <button type="button" class="btn btn-dark" id="account-sign-out">Sign out</button>
+      </div>
+    </div>
+    <div id="account-signed-out">
+      <div class="tabs">
+        <button type="button" id="account-tab-login" class="tab active">Sign in</button>
+        <button type="button" id="account-tab-register" class="tab">Create account</button>
+      </div>
+      <form id="account-login-form" class="stack">
+        <input type="email" name="email" placeholder="Email" autocomplete="email" required />
+        <input type="password" name="password" placeholder="Password" autocomplete="current-password" required />
+        <button type="submit" class="btn btn-dark">Sign in</button>
+        <p class="form-error" id="account-login-error" role="alert"></p>
+      </form>
+      <form id="account-register-form" class="stack hidden">
+        <input type="email" name="email" placeholder="Email" autocomplete="email" required />
+        <input type="password" name="password" placeholder="Choose a password" autocomplete="new-password" minlength="6" required />
+        <button type="submit" class="btn btn-dark">Create account</button>
+        <p class="form-error" id="account-register-error" role="alert"></p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Shop assistant -->
+<button type="button" class="assistant-fab" id="assistant-fab" aria-label="Open shop assistant">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
+  <span>Ask us</span>
+</button>
+<section class="assistant" id="assistant" hidden aria-label="Shop assistant">
+  <header class="assistant-head">
+    <div><strong>Loomwell assistant</strong><span>Stock, products, delivery &amp; support</span></div>
+    <button type="button" class="modal-close" id="assistant-close" aria-label="Close assistant">&times;</button>
+  </header>
+  <div class="assistant-log" id="assistant-log" aria-live="polite"></div>
+  <div class="assistant-chips" id="assistant-chips">
+    <button type="button" data-prompt="Do you have beige linen shirts in stock?">Beige linen in stock?</button>
+    <button type="button" data-prompt="Show me hoodies">Show hoodies</button>
+    <button type="button" data-prompt="How long does delivery take?">Delivery time</button>
+    <button type="button" data-prompt="Talk to support">Talk to support</button>
+  </div>
+  <form class="assistant-form" id="assistant-form">
+    <label class="attach-btn" for="assistant-file" title="Send a photo to find similar products" aria-label="Attach a photo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.5l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8L13.5 4.4a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/></svg>
+    </label>
+    <input type="file" id="assistant-file" accept="image/*" hidden />
+    <input type="text" id="assistant-input" placeholder="Ask about a product, stock, delivery…" autocomplete="off" />
+    <button type="submit" class="send-btn" aria-label="Send">&rarr;</button>
+  </form>
+  <p class="assistant-attached hidden" id="assistant-attached"></p>
+</section>
+
+<div class="cookie-banner" id="cookie-banner" hidden>
+  <p>We use one small cookie to keep you signed in. No ads, no tracking.</p>
+  <div class="cookie-actions">
+    <button id="cookie-decline" class="btn btn-ghost btn-sm">Decline</button>
+    <button id="cookie-accept" class="btn btn-dark btn-sm">Accept</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="/static/common.js?v={{ asset_version }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

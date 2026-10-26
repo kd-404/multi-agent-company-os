@@ -23,6 +23,10 @@ from .routes import (
     payment_routes,
     checkout_routes,
     agents_routes,
+    assistant_routes,
+    support_routes,
+    studio_routes,
+    storefront_admin_routes,
 )
 
 
@@ -72,6 +76,10 @@ app.include_router(warehouse_routes.router)
 app.include_router(payment_routes.router)
 app.include_router(checkout_routes.router)
 app.include_router(agents_routes.router)
+app.include_router(assistant_routes.router)
+app.include_router(support_routes.router)
+app.include_router(studio_routes.router)
+app.include_router(storefront_admin_routes.router)
 
 
 @app.on_event("startup")
@@ -94,6 +102,18 @@ def shop(request: Request):
 def shop_design(design_id: int, request: Request):
     """One design's own page - detail view, not just the quick-look modal."""
     return templates.TemplateResponse("shop_design.html", {"request": request, "design_id": design_id})
+
+
+@app.get("/studio", response_class=HTMLResponse)
+def studio(request: Request):
+    """Print-your-own: upload or generate artwork, pick a garment, preview, order."""
+    return templates.TemplateResponse("studio.html", {"request": request})
+
+
+@app.get("/checkout/{kind}/{item_id}", response_class=HTMLResponse)
+def checkout_page(kind: str, item_id: int, request: Request):
+    """Full-page demo checkout (address -> summary -> payment). kind = design | custom."""
+    return templates.TemplateResponse("checkout.html", {"request": request, "kind": kind, "item_id": item_id})
 
 
 @app.get("/health")

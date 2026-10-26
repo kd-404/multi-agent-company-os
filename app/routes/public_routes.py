@@ -13,18 +13,12 @@ import logging
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlalchemy.orm import Session
 
-from ..db import get_db, Design, SearchLog
+from ..db import get_db, Design, SearchLog, ProductPhoto, BrandAsset
 from ..compositing import composite_mockup
-from ..garments import garment_label, color_label, DEFAULT_GARMENT
+from ..garments import DEFAULT_GARMENT
+from ..catalog import product_dict
+from ..similar import find_similar
 from .mockup_routes import resolve_design_template
-from ..visual_search import (
-    extract_signals,
-    match_score,
-    tags_to_text,
-    text_to_tags,
-    color_to_text,
-    text_to_color,
-)
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -33,7 +27,9 @@ MOCKUP_SLOTS = ("front", "back", "model")
 
 # Mockups don't change once a design is approved, so the browser (and any
 # CDN in front of this later) can hold onto them instead of re-fetching.
-MOCKUP_CACHE_HEADERS = {"Cache-Control": "public, max-age=86400"}
+# Short on purpose: when an AI product photo replaces the composite fallback
+# the URL stays the same, so a long cache would keep showing the stale one.
+MOCKUP_CACHE_HEADERS = {"Cache-Control": "public, max-age=300"}
 
 
 @router.get("/api/public/products")
@@ -44,19 +40,7 @@ def list_products(db: Session = Depends(get_db)):
         .order_by(Design.created_at.desc())
         .all()
     )
-    return [
-        {
-            "id": d.id,
-            "trend_summary": d.trend_summary,
-            "sources": d.sources.split("\n") if d.sources else [],
-            "mockups": {slot: f"/api/public/design/{d.id}/mockup/{slot}" for slot in MOCKUP_SLOTS},
-            "garment": d.garment or DEFAULT_GARMENT,
-            "garment_label": garment_label(d.garment),
-            "color_label": color_label(d.color),
-            "created_at": d.created_at.isoformat(),
-        }
-        for d in designs
-    ]
+    return [product_dict(d) for d in designs]
 
 
 @router.get("/api/public/products/{design_id}")
@@ -65,18 +49,22 @@ def get_product(design_id: int, db: Session = Depends(get_db)):
     d = db.query(Design).filter(Design.id == design_id, Design.status == "approved").first()
     if not d:
         raise HTTPException(status_code=404, detail="Design not found")
-    return {
-        "id": d.id,
-        "trend_summary": d.trend_summary,
-        "sources": d.sources.split("\n") if d.sources else [],
-        "mockups": {slot: f"/api/public/design/{d.id}/mockup/{slot}" for slot in MOCKUP_SLOTS},
-        "garment": d.garment or DEFAULT_GARMENT,
-        "garment_label": garment_label(d.garment),
-        "color_label": color_label(d.color),
-        "caption": d.social_caption,
-        "hashtags": d.social_hashtags,
-        "created_at": d.created_at.isoformat(),
-    }
+    return product_dict(d, include_caption=True)
+
+
+@router.get("/api/public/brand")
+def list_brand_assets(db: Session = Depends(get_db)):
+    """Which storefront images have been generated (the shop falls back to
+    plain beige panels for the rest)."""
+    return {"keys": [k for (k,) in db.query(BrandAsset.key).all()]}
+
+
+@router.get("/api/public/brand/{key}")
+def brand_asset(key: str, db: Session = Depends(get_db)):
+    asset = db.query(BrandAsset).filter(BrandAsset.key == key).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Not generated yet")
+    return Response(content=asset.image_data, media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
 
 
 @router.get("/api/public/design/{design_id}/mockup/{slot}")
@@ -91,6 +79,12 @@ def public_design_mockup(design_id: int, slot: str, db: Session = Depends(get_db
     )
     if not design:
         raise HTTPException(status_code=404, detail="Design not found")
+
+    photo = db.query(ProductPhoto).filter(ProductPhoto.design_id == design_id, ProductPhoto.slot == slot).first()
+    if photo:
+        return Response(content=photo.image_data, media_type="image/png", headers=MOCKUP_CACHE_HEADERS)
+    if (design.kind or "print") == "plain":
+        raise HTTPException(status_code=404, detail="Photo not available")
 
     template = resolve_design_template(design, slot, db)
     if not template:
@@ -113,52 +107,13 @@ async def visual_search(file: UploadFile = File(...), db: Session = Depends(get_
     """
     image_bytes = await file.read()
     try:
-        query_tags, query_color = extract_signals(image_bytes)
-        log.info("Visual search: query photo tagged OK: tags=%s color=%s", query_tags, query_color)
-    except Exception:
-        log.exception("Visual search: could not analyze the uploaded photo")
+        top_matches, _tags = find_similar(db, image_bytes, limit=6)
+    except ValueError:
         raise HTTPException(status_code=400, detail="Couldn't read that as an image - try a JPG or PNG.")
-
-    designs = db.query(Design).filter(Design.status == "approved").all()
-    log.info("Visual search: comparing against %d approved design(s)", len(designs))
-    if not designs:
-        return []
-
-    scored = []
-    for d in designs:
-        if d.vision_tags is None or d.dominant_color is None:
-            # Backfills designs approved before this feature existed.
-            try:
-                tags, color = extract_signals(d.image_data)
-                d.vision_tags, d.dominant_color = tags_to_text(tags), color_to_text(color)
-                db.add(d)
-                log.info("Visual search: backfilled tags for design %s: tags=%s color=%s", d.id, tags, color)
-            except Exception:
-                log.exception("Visual search: backfill tagging failed for design %s, skipping it this round", d.id)
-                continue
-        score = match_score(query_tags, query_color, text_to_tags(d.vision_tags), text_to_color(d.dominant_color))
-        log.info("Visual search: design %s scored %.3f (tags=%s)", d.id, score, d.vision_tags)
-        scored.append((score, d))
-    db.commit()
-
-    scored.sort(key=lambda pair: pair[0], reverse=True)
-    top_matches = scored[:6]
 
     if top_matches:
         best_score, best_design = top_matches[0]
         db.add(SearchLog(matched_design_id=best_design.id, score=round(best_score * 100)))
         db.commit()
 
-    return [
-        {
-            "id": d.id,
-            "trend_summary": d.trend_summary,
-            "sources": d.sources.split("\n") if d.sources else [],
-            "mockups": {slot: f"/api/public/design/{d.id}/mockup/{slot}" for slot in MOCKUP_SLOTS},
-            "garment": d.garment or DEFAULT_GARMENT,
-            "garment_label": garment_label(d.garment),
-            "color_label": color_label(d.color),
-            "similarity": round(score * 100),
-        }
-        for score, d in top_matches
-    ]
+    return [{**product_dict(d), "similarity": round(score * 100)} for score, d in top_matches]

@@ -21,10 +21,11 @@ Foundry agent beyond the image deployment itself.
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Response
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from ..db import get_db, Design, SearchLog, User
+from ..db import get_db, Design, SearchLog, User, ProductPhoto
 from ..auth import require_admin
 from ..image_client import generate_image
 from ..visual_search import extract_signals, tags_to_text, color_to_text
@@ -33,6 +34,7 @@ from ..agent_log import log_activity
 from ..garments import pick_garment_and_color, garment_label, color_label, GARMENTS, COLORS
 from ..evaluation import next_run_seq, timed_stage, record_metric, relevance_score, summarize as eval_summarize
 from .mockup_routes import design_mockup_matches_garment
+from ..product_photos import generate_photos_for_design, background_generate, PHOTO_SLOTS
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -268,6 +270,7 @@ def list_designs(db: Session = Depends(get_db), _admin: User = Depends(require_a
             "garment_label": garment_label(d.garment),
             "color_label": color_label(d.color),
             "mockup_matches_garment": design_mockup_matches_garment(d, db),
+            "kind": d.kind or "print",
             "created_at": d.created_at.isoformat(),
         }
         for d in designs
@@ -295,9 +298,48 @@ def _set_status(design_id: int, status: str, db: Session, _admin: User):
 
 @router.post("/api/admin/design/{design_id}/approve")
 def approve_design(
-    design_id: int, db: Session = Depends(get_db), _admin: User = Depends(require_admin)
+    design_id: int,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ):
-    return _set_status(design_id, "approved", db, _admin)
+    result = _set_status(design_id, "approved", db, _admin)
+    # Approval is the moment a design becomes a product, so it's when the
+    # AI product photos (flat lay + worn shot) get made - in the background,
+    # so the admin's click returns immediately. Until they land, the shop
+    # shows the Pillow composite fallback.
+    background.add_task(background_generate, design_id)
+    return result
+
+
+@router.post("/api/admin/design/{design_id}/photos")
+def generate_design_photos(
+    design_id: int,
+    slot: str = Form(...),
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    """(Re)generate ONE AI product photo slot for a design. One slot per call
+    (~30-60s) so it never hits the App Service request timeout; the admin UI
+    loops over slots/designs."""
+    if slot not in PHOTO_SLOTS:
+        raise HTTPException(status_code=400, detail=f"slot must be one of {PHOTO_SLOTS}")
+    if not db.query(Design).filter(Design.id == design_id).first():
+        raise HTTPException(status_code=404, detail="Design not found")
+    results = generate_photos_for_design(db, design_id, slots=(slot,))
+    return {"design_id": design_id, "results": results}
+
+
+@router.get("/api/admin/photos/status")
+def photos_status(db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
+    """Which approved designs still lack an AI photo for each slot."""
+    have = {(p.design_id, p.slot) for p in db.query(ProductPhoto.design_id, ProductPhoto.slot).all()}
+    designs = db.query(Design).filter(Design.status == "approved", or_(Design.kind.is_(None), Design.kind != "plain")).all()
+    missing = [
+        {"design_id": d.id, "slot": slot}
+        for d in designs for slot in PHOTO_SLOTS if (d.id, slot) not in have
+    ]
+    return {"approved": len(designs), "missing": missing}
 
 
 @router.post("/api/admin/design/{design_id}/reject")
