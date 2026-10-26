@@ -7,9 +7,43 @@ async function loadProducts() {
   const res = await fetch("/api/public/products");
   if (!res.ok) return;
   products = await res.json();
-  renderGrid(products);
+  applyFilters();
   if (products.length) setupHero(products[0]);
 }
+
+// --- Garment/color sidebar filters (real data from the mockup matrix -
+// not decorative) + the topbar keyword search, combined. ---
+let currentQuery = "";
+const activeGarments = new Set();
+const activeColors = new Set();
+
+function applyFilters() {
+  let list = products;
+  if (currentQuery) list = list.filter((p) => p.trend_summary.toLowerCase().includes(currentQuery));
+  if (activeGarments.size) list = list.filter((p) => activeGarments.has(p.garment_label));
+  if (activeColors.size) list = list.filter((p) => activeColors.has(p.color_label));
+  renderGrid(list);
+  document.getElementById("filters-clear").classList.toggle("hidden", activeGarments.size === 0 && activeColors.size === 0);
+}
+
+document.querySelectorAll(".filter-garment").forEach((cb) => {
+  cb.addEventListener("change", () => {
+    cb.checked ? activeGarments.add(cb.value) : activeGarments.delete(cb.value);
+    applyFilters();
+  });
+});
+document.querySelectorAll(".filter-color").forEach((cb) => {
+  cb.addEventListener("change", () => {
+    cb.checked ? activeColors.add(cb.value) : activeColors.delete(cb.value);
+    applyFilters();
+  });
+});
+document.getElementById("filters-clear").addEventListener("click", () => {
+  activeGarments.clear();
+  activeColors.clear();
+  document.querySelectorAll(".filter-garment, .filter-color").forEach((cb) => { cb.checked = false; });
+  applyFilters();
+});
 
 function renderGrid(list) {
   const grid = document.getElementById("product-grid");
@@ -41,12 +75,8 @@ function renderGrid(list) {
 // separate from the photo-based "Find something like it" visual search) ---
 document.getElementById("topbar-search-form").addEventListener("submit", (e) => {
   e.preventDefault();
-  const q = document.getElementById("topbar-search-input").value.trim().toLowerCase();
-  if (!q) {
-    renderGrid(products);
-  } else {
-    renderGrid(products.filter((p) => p.trend_summary.toLowerCase().includes(q)));
-  }
+  currentQuery = document.getElementById("topbar-search-input").value.trim().toLowerCase();
+  applyFilters();
   document.getElementById("collection").scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth" });
 });
 

@@ -35,6 +35,10 @@
     </div>
   </header>
 
+  <div class="agent-bar">
+    <p class="hero-status" id="hero-status" aria-live="polite"></p>
+  </div>
+
   <nav class="category-strip">
     <a href="#collection" class="category-chip active">All</a>
     <a href="#collection" class="category-chip">T-Shirts</a>
@@ -46,6 +50,7 @@
   <main>
     <section class="hero">
       <div class="hero-copy">
+        <span class="hero-eyebrow">AI-researched &middot; human-approved</span>
         <h1 class="hero-title">Clothing,<br />written by<br />machines.</h1>
         <p class="hero-sub">
           Every design here started as a live search across what people are actually
@@ -53,7 +58,6 @@
           goes up — the research and the artwork are the machine's.
         </p>
         <a href="#collection" class="cta">See the collection</a>
-        <p class="hero-status" id="hero-status" aria-live="polite"></p>
       </div>
       <div class="hero-visual">
         <div class="tilt-stage" id="hero-tilt">
@@ -92,7 +96,24 @@
         <h2>The Collection</h2>
         <p id="collection-count" class="collection-count"></p>
       </div>
-      <div class="grid" id="product-grid"></div>
+      <div class="collection-layout">
+        <aside class="filters-sidebar" aria-label="Filter the collection">
+          <div class="filter-group">
+            <h3>Garment</h3>
+            <label class="filter-option"><input type="checkbox" class="filter-garment" value="T-Shirt" /> T-Shirt</label>
+            <label class="filter-option"><input type="checkbox" class="filter-garment" value="Full-Sleeve Shirt" /> Full-Sleeve</label>
+            <label class="filter-option"><input type="checkbox" class="filter-garment" value="Hoodie" /> Hoodie</label>
+          </div>
+          <div class="filter-group">
+            <h3>Color</h3>
+            <label class="filter-option"><input type="checkbox" class="filter-color" value="White" /> White</label>
+            <label class="filter-option"><input type="checkbox" class="filter-color" value="Black" /> Black</label>
+            <label class="filter-option"><input type="checkbox" class="filter-color" value="Heather Gray" /> Heather Gray</label>
+          </div>
+          <button type="button" id="filters-clear" class="hidden">Clear filters</button>
+        </aside>
+        <div class="grid" id="product-grid"></div>
+      </div>
     </section>
 
     <section class="process" id="process">
