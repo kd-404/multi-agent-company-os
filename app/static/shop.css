@@ -153,7 +153,7 @@ textarea { resize: vertical; }
 .farm-card { position: relative; border-radius: var(--radius); overflow: hidden; aspect-ratio: 2 / 3; background: linear-gradient(160deg, #5a4333, #3b2a1e); background-size: cover; background-position: center; }
 .farm-card:not(.has-photo)::after { content: "Photograph pending — generate it in the staff dashboard"; position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 20px; color: var(--tan); font-size: 13px; }
 /* Permanent "farm edit" photography — fixed editorial set, not the brand-image agent. */
-#farm-1.has-photo { background-image: url("https://images.unsplash.com/photo-1715092761414-d7586eb1c038?fm=jpg&q=80&w=1400&auto=format&fit=crop"); }
+#farm-1.has-photo { background-image: url("https://images.unsplash.com/photo-1733065122105-8f6bd5886857?fm=jpg&q=80&w=1400&auto=format&fit=crop"); background-position: center 20%; }
 #farm-2.has-photo { background-image: url("https://images.unsplash.com/photo-1723750599301-fee00405eaff?fm=jpg&q=80&w=1400&auto=format&fit=crop"); }
 #farm-3.has-photo { background-image: url("https://images.unsplash.com/photo-1701279680687-07aefe7bd954?fm=jpg&q=80&w=1400&auto=format&fit=crop"); }
 .farm-card figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 60px 20px 20px; background: linear-gradient(0deg, rgba(30, 20, 12, .85), rgba(30, 20, 12, 0)); font-family: var(--serif); font-style: italic; font-size: 22px; line-height: 1.25; color: var(--white); }
