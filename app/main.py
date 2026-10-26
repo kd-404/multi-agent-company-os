@@ -21,6 +21,7 @@ from .routes import (
     marketing_routes,
     warehouse_routes,
     payment_routes,
+    checkout_routes,
     agents_routes,
 )
 
@@ -69,6 +70,7 @@ app.include_router(public_routes.router)
 app.include_router(marketing_routes.router)
 app.include_router(warehouse_routes.router)
 app.include_router(payment_routes.router)
+app.include_router(checkout_routes.router)
 app.include_router(agents_routes.router)
 
 

@@ -56,7 +56,7 @@ async function enterDashboard() {
   dashboardScreen.classList.remove("hidden");
 
   if (me.role === "admin") {
-    ["admin-panel", "design-panel", "interest-panel", "agents-panel", "marketing-panel", "warehouse-panel", "eval-panel"].forEach((id) => {
+    ["admin-panel", "design-panel", "interest-panel", "agents-panel", "marketing-panel", "warehouse-panel", "eval-panel", "funnel-panel"].forEach((id) => {
       document.getElementById(id).classList.remove("hidden");
     });
     document.querySelectorAll(".sidebar-link[data-target]").forEach((a) => a.classList.remove("hidden"));
@@ -70,6 +70,7 @@ async function enterDashboard() {
     loadWarehouseStatus();
     loadStatRow();
     loadEvalDashboard();
+    loadCheckoutFunnel();
   }
 
   loadChatHistory();
@@ -749,4 +750,36 @@ function drawRelevanceChart(points) {
     ctx.arc(x, y, 2.5, 0, Math.PI * 2);
     ctx.fill();
   });
+}
+
+// --- Checkout funnel (demo checkout - app/routes/checkout_routes.py) ---
+async function loadCheckoutFunnel() {
+  const res = await fetch("/api/admin/checkout-funnel/summary");
+  if (!res.ok) return;
+  const data = await res.json();
+
+  const statRow = document.getElementById("funnel-stat-row");
+  statRow.innerHTML = `
+    <div class="funnel-stat"><strong>${data.opened}</strong><span>Reached checkout</span></div>
+    <div class="funnel-stat"><strong>${data.paid}</strong><span>Completed (demo)</span></div>
+    <div class="funnel-stat"><strong>${data.abandoned}</strong><span>Opened &amp; left</span></div>
+    <div class="funnel-stat"><strong>${data.conversion_pct}%</strong><span>Conversion</span></div>
+  `;
+
+  const eventsEl = document.getElementById("funnel-events");
+  if (!data.events.length) {
+    eventsEl.innerHTML = '<p class="hint">No checkout activity yet.</p>';
+    return;
+  }
+  eventsEl.innerHTML = data.events.map((e) => `
+    <div class="funnel-event-row">
+      <span class="funnel-stage-badge funnel-stage-${e.stage}">${e.stage === "paid" ? "Completed" : "Opened"}</span>
+      <div class="funnel-event-detail">
+        <p class="funnel-event-user">${e.user_email} <span class="funnel-event-amount">&#8377;${e.amount_inr}</span></p>
+        <p class="funnel-event-design">${e.design_summary}</p>
+        ${e.shipping_name ? `<p class="funnel-event-shipping">${e.shipping_name} &middot; ${e.shipping_address}</p>` : ""}
+      </div>
+      <span class="funnel-event-time">${new Date(e.created_at).toLocaleString()}</span>
+    </div>
+  `).join("");
 }

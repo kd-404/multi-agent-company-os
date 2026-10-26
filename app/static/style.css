@@ -341,3 +341,30 @@ button:hover { opacity: 0.9; }
   background: transparent !important; color: var(--muted) !important;
   border: 1px solid var(--border) !important; margin-top: 6px; font-size: 12px;
 }
+
+/* --- Checkout funnel --- */
+.funnel-stat-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 12px 0 20px;
+}
+.funnel-stat {
+  border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: #fafbfd; text-align: center;
+}
+.funnel-stat strong { display: block; font-size: 22px; color: var(--navy); }
+.funnel-stat span { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+.funnel-events { display: flex; flex-direction: column; gap: 8px; }
+.funnel-event-row {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px; border: 1px solid var(--border);
+  border-radius: 8px; background: #fff;
+}
+.funnel-stage-badge {
+  flex-shrink: 0; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 10px; margin-top: 2px;
+}
+.funnel-stage-opened { background: #fff3cd; color: #856404; }
+.funnel-stage-paid { background: #d4edda; color: #155724; }
+.funnel-event-detail { flex: 1; min-width: 0; }
+.funnel-event-user { margin: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+.funnel-event-amount { font-weight: 400; color: var(--muted); }
+.funnel-event-design { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+.funnel-event-shipping { margin: 2px 0 0; font-size: 11.5px; color: var(--muted); font-style: italic; }
+.funnel-event-time { flex-shrink: 0; font-size: 11px; color: var(--muted); white-space: nowrap; }

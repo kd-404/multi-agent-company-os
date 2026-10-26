@@ -67,6 +67,10 @@
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-7-7 18-2.5-7.5L3 11z"/></svg>
               Marketing
             </a>
+            <a href="#funnel-panel" class="sidebar-link hidden" data-target="funnel-panel">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h18l-7 9v6l-4 2v-8z"/></svg>
+              Checkout Funnel
+            </a>
             <a href="#warehouse-panel" class="sidebar-link hidden" data-target="warehouse-panel">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3V9.5z"/><path d="M9 21v-7h6v7"/></svg>
               Warehouse
@@ -181,6 +185,15 @@
               <button type="button" id="scan-trends-btn">Scan for new trends</button>
               <p class="note" id="scan-trends-status"></p>
               <div id="marketing-list" class="marketing-list"></div>
+            </div>
+
+            <!-- Admin-only: Checkout Funnel (demo checkout - see app/routes/checkout_routes.py) -->
+            <div class="panel hidden" id="funnel-panel">
+              <h2>Checkout Funnel</h2>
+              <p class="hint">Razorpay isn't connected yet, so "Buy now" on the shop runs a Loomwell-branded demo checkout instead of a real one &mdash; no money moves, but every open and every completed order is logged here with the real shopper's email, so you can see how many people reach checkout and how many actually go through.</p>
+              <div class="funnel-stat-row" id="funnel-stat-row"></div>
+              <h3>Recent checkout activity</h3>
+              <div id="funnel-events" class="funnel-events"></div>
             </div>
 
             <!-- Admin-only: Warehouse Agent -->

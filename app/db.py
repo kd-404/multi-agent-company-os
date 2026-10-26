@@ -203,6 +203,33 @@ class EvalMetric(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class CheckoutEvent(Base):
+    """
+    One row per funnel step in the demo/mimic checkout flow (see
+    app/routes/checkout_routes.py) - NOT tied to real Razorpay, which
+    stays separate in Order/payment_routes.py for whenever real keys are
+    configured. This is what answers "how many people got to checkout and
+    how many actually went through" (the admin "Checkout Funnel" panel):
+    every open of the checkout modal logs a "opened" row, every completed
+    demo confirmation logs a "paid" row, both carrying the real logged-in
+    user's email and the design/amount involved - no separate guest-
+    identity system, since buying already requires being logged in.
+
+    stage: "opened" | "paid"
+    """
+    __tablename__ = "checkout_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    design_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    user_email = Column(String(255), nullable=False)
+    stage = Column(String(20), nullable=False, index=True)
+    amount_inr = Column(Integer, nullable=False)
+    shipping_name = Column(String(200), nullable=True)
+    shipping_address = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
     _run_lightweight_migrations()

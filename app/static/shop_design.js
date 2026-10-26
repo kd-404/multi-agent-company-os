@@ -108,7 +108,12 @@ async function loadRelated() {
 
 loadDesign();
 
-// --- Buy now (Razorpay when connected, honest simulated order until then) ---
+// --- Buy now: Loomwell's own demo checkout modal (app/routes/checkout_routes.py) ---
+// Not Razorpay, not any real payment processor - this exists to make the
+// order flow visible end to end (and to feed the admin "Checkout Funnel"
+// panel real opened/paid events with user detail) while a real payment
+// provider is still in setup. See checkout_routes.py's module docstring
+// for why no card-like fields are collected here even as a mimic.
 document.getElementById("buy-now-btn").addEventListener("click", async () => {
   const btn = document.getElementById("buy-now-btn");
   const statusEl = document.getElementById("buy-status");
@@ -127,54 +132,14 @@ document.getElementById("buy-now-btn").addEventListener("click", async () => {
   statusEl.textContent = "";
 
   try {
-    const res = await fetch(`/api/public/payment/create-order/${DESIGN_ID}`, { method: "POST" });
+    const res = await fetch(`/api/public/checkout/open/${DESIGN_ID}`, { method: "POST" });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       statusEl.textContent = err.detail || "Couldn't start checkout - try again.";
       return;
     }
     const order = await res.json();
-
-    if (order.mode === "simulated") {
-      statusEl.textContent = `Order simulated: ₹${order.amount_inr} for design #${DESIGN_ID}. Razorpay isn't connected yet, so no real charge happened - this is logged on the Agent Status feed as a test order.`;
-      return;
-    }
-
-    // Live mode: hand off to Razorpay's own hosted Checkout widget. This
-    // page never touches card/UPI details itself - Razorpay's widget
-    // collects them, and only a payment id + signature come back to us.
-    if (typeof Razorpay === "undefined") {
-      statusEl.textContent = "Checkout widget failed to load - check your connection and try again.";
-      return;
-    }
-    const rzp = new Razorpay({
-      key: order.key_id,
-      amount: order.amount,
-      currency: order.currency,
-      name: "Loomwell",
-      description: order.design_summary.slice(0, 80),
-      order_id: order.razorpay_order_id,
-      theme: { color: "#c6ff5e" },
-      handler: async (response) => {
-        statusEl.textContent = "Verifying payment…";
-        const verifyRes = await fetch("/api/public/payment/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-          }),
-        });
-        statusEl.textContent = verifyRes.ok
-          ? "Payment confirmed - thank you! (Shipping/fulfillment isn't automated yet - Loomwell will follow up by email.)"
-          : "Payment went through at Razorpay but couldn't be verified here - contact support with your payment id.";
-      },
-      modal: {
-        ondismiss: () => { statusEl.textContent = "Checkout closed - nothing was charged."; },
-      },
-    });
-    rzp.open();
+    openCheckoutModal(order);
   } finally {
     btn.disabled = false;
     btn.textContent = "Buy now — ₹899";
@@ -282,4 +247,61 @@ document.getElementById("cart-corner").addEventListener("click", (e) => {
 });
 document.addEventListener("click", () => {
   document.getElementById("cart-popover").hidden = true;
+});
+
+// --- Demo checkout modal (see app/routes/checkout_routes.py) ---
+function openCheckoutModal(order) {
+  const backdrop = document.getElementById("checkout-backdrop");
+  const summary = document.getElementById("checkout-summary");
+  const form = document.getElementById("checkout-form");
+  const statusEl = document.getElementById("checkout-status");
+  const confirmBtn = document.getElementById("checkout-confirm-btn");
+
+  summary.innerHTML = `
+    <p class="checkout-line"><strong>${order.design_summary.slice(0, 90)}</strong></p>
+    <p class="checkout-line">Total: &#8377;${order.amount_inr}</p>
+    <p class="checkout-line checkout-email">Order for ${order.user_email}</p>
+  `;
+  statusEl.textContent = "";
+  form.reset();
+  form.classList.remove("hidden");
+  confirmBtn.disabled = false;
+  confirmBtn.textContent = "Confirm order (demo)";
+  backdrop.hidden = false;
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Confirming…";
+    statusEl.textContent = "";
+
+    const body = new FormData();
+    body.append("shipping_name", document.getElementById("checkout-name").value.trim());
+    body.append("shipping_address", document.getElementById("checkout-address").value.trim());
+
+    try {
+      const res = await fetch(`/api/public/checkout/confirm/${order.design_id}`, { method: "POST", body });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        statusEl.textContent = err.detail || "Couldn't confirm the order - try again.";
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Confirm order (demo)";
+        return;
+      }
+      form.classList.add("hidden");
+      statusEl.textContent = "Order confirmed (demo) - thank you! No real charge happened; Loomwell will follow up by email about shipping.";
+      document.getElementById("buy-status").textContent = "Order confirmed (demo).";
+    } catch (e) {
+      statusEl.textContent = "Couldn't reach the server - try again.";
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "Confirm order (demo)";
+    }
+  };
+}
+
+document.getElementById("checkout-modal-close").onclick = () => {
+  document.getElementById("checkout-backdrop").hidden = true;
+};
+document.getElementById("checkout-backdrop").addEventListener("click", (e) => {
+  if (e.target.id === "checkout-backdrop") e.target.hidden = true;
 });

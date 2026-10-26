@@ -139,7 +139,25 @@
     </div>
   </div>
 
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <!-- Demo checkout - Loomwell's own mimic checkout flow, not a real
+       payment processor. See app/routes/checkout_routes.py. -->
+  <div class="modal-backdrop" id="checkout-backdrop" hidden>
+    <div class="modal checkout-modal" role="dialog" aria-modal="true" aria-labelledby="checkout-modal-title">
+      <button class="modal-close" id="checkout-modal-close" aria-label="Close">&times;</button>
+      <div class="checkout-modal-body">
+        <h3 id="checkout-modal-title">Checkout</h3>
+        <p class="checkout-demo-note">Demo checkout &mdash; no real payment is collected or charged. This exists so the order flow can be seen end to end while Loomwell's payment provider is still in setup.</p>
+        <div class="checkout-summary" id="checkout-summary"></div>
+        <form id="checkout-form">
+          <input type="text" id="checkout-name" placeholder="Full name" required />
+          <textarea id="checkout-address" placeholder="Shipping address" rows="3" required></textarea>
+          <button type="submit" id="checkout-confirm-btn">Confirm order (demo)</button>
+        </form>
+        <p class="checkout-status" id="checkout-status"></p>
+      </div>
+    </div>
+  </div>
+
   <script>window.LOOMWELL_DESIGN_ID = {{ design_id }};</script>
   <script src="/static/shop_design.js?v={{ asset_version }}"></script>
 </body>

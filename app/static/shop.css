@@ -812,6 +812,34 @@ a { color: inherit; }
   border-radius: 8px; padding: 10px 16px; cursor: pointer; font-family: var(--font-body); margin-top: 10px;
 }
 
+/* ---------- demo checkout modal ---------- */
+.checkout-modal { grid-template-columns: 1fr; max-width: 420px; }
+.checkout-modal-body { padding: 32px; }
+.checkout-modal-body h3 {
+  font-family: var(--font-display); font-weight: 500; font-size: 22px;
+  margin: 0 0 10px; color: var(--text);
+}
+.checkout-demo-note {
+  font-size: 12.5px; color: var(--muted); background: var(--canvas);
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+  margin: 0 0 16px; line-height: 1.5;
+}
+.checkout-summary { margin-bottom: 16px; }
+.checkout-line { margin: 0 0 4px; color: var(--text); font-size: 14px; }
+.checkout-email { color: var(--muted); font-size: 12.5px; }
+#checkout-form { display: flex; flex-direction: column; gap: 10px; }
+#checkout-form input, #checkout-form textarea {
+  padding: 11px 14px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--canvas); color: var(--text); font-size: 14px;
+  font-family: var(--font-body); resize: vertical;
+}
+#checkout-confirm-btn {
+  background: var(--neon); color: var(--ink); border: none; border-radius: 8px;
+  padding: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body);
+}
+#checkout-confirm-btn:disabled { opacity: 0.6; cursor: wait; }
+.checkout-status { font-size: 13px; color: var(--text); margin: 12px 0 0; line-height: 1.5; }
+
 /* ---------- footer (dark bookend) ---------- */
 .site-footer {
   background: var(--ink);
