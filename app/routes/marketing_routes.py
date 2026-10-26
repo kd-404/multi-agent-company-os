@@ -29,6 +29,7 @@ from ..db import get_db, Design, User
 from ..auth import require_admin
 from ..trend_research import research_trend
 from ..agent_log import log_activity
+from ..retry import with_retry
 from .design_routes import _generate_one_design
 
 log = logging.getLogger(__name__)
@@ -166,28 +167,41 @@ def _post_to_instagram(image_url: str, caption: str) -> str:
     """
     Two-step Instagram Graph API publish: create a media container from a
     PUBLICLY reachable image URL (Instagram's servers fetch it themselves -
-    it can't be a local/relative path), then publish that container. Raises
-    on any HTTP error; returns the published media id.
+    it can't be a local/relative path), then publish that container. Each
+    step retries on timeouts/5xx/429 (see app/retry.py) - NOT on the
+    create step retried as a whole with publish, since retrying a
+    successful create would mint duplicate media containers; each step is
+    its own independent retry instead. Raises on any HTTP error; returns
+    the published media id.
     """
     base = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{settings.INSTAGRAM_BUSINESS_ACCOUNT_ID}"
-    create = httpx.post(
-        f"{base}/media",
-        data={
-            "image_url": image_url,
-            "caption": caption,
-            "access_token": settings.INSTAGRAM_ACCESS_TOKEN,
-        },
-        timeout=30.0,
-    )
-    create.raise_for_status()
+
+    def _create():
+        resp = httpx.post(
+            f"{base}/media",
+            data={
+                "image_url": image_url,
+                "caption": caption,
+                "access_token": settings.INSTAGRAM_ACCESS_TOKEN,
+            },
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        return resp
+
+    create = with_retry(_create, label="instagram_create_media")
     creation_id = create.json()["id"]
 
-    publish = httpx.post(
-        f"{base}/media_publish",
-        data={"creation_id": creation_id, "access_token": settings.INSTAGRAM_ACCESS_TOKEN},
-        timeout=30.0,
-    )
-    publish.raise_for_status()
+    def _publish():
+        resp = httpx.post(
+            f"{base}/media_publish",
+            data={"creation_id": creation_id, "access_token": settings.INSTAGRAM_ACCESS_TOKEN},
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        return resp
+
+    publish = with_retry(_publish, label="instagram_publish_media")
     return publish.json()["id"]
 
 

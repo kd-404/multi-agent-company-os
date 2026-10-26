@@ -30,6 +30,7 @@ from ..config import settings
 from ..db import get_db, AgentActivity, Design, Order, User
 from ..auth import require_admin, get_current_user
 from ..agent_log import log_activity
+from ..retry import with_retry
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -82,21 +83,28 @@ def create_order(
             "message": entry.message,
         }
 
+    # Fixed (not per-attempt) receipt, so a RETRY of this same checkout
+    # attempt reuses the same receipt value rather than minting a new one
+    # per retry - Razorpay treats receipt as idempotency-adjacent, so this
+    # keeps a retried request from being misread as a second, separate order.
     receipt = f"loomwell-{design_id}-{user.id}-{int(time.time())}"
     try:
-        resp = httpx.post(
-            "https://api.razorpay.com/v1/orders",
-            auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET),
-            json={
-                "amount": DEFAULT_PRICE_INR * 100,  # paise
-                "currency": "INR",
-                "receipt": receipt,
-                "notes": {"design_id": str(design_id), "user_id": str(user.id)},
-            },
-            timeout=20.0,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+        def _create_order():
+            resp = httpx.post(
+                "https://api.razorpay.com/v1/orders",
+                auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET),
+                json={
+                    "amount": DEFAULT_PRICE_INR * 100,  # paise
+                    "currency": "INR",
+                    "receipt": receipt,
+                    "notes": {"design_id": str(design_id), "user_id": str(user.id)},
+                },
+                timeout=20.0,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+        data = with_retry(_create_order, label="razorpay_create_order")
     except Exception as e:
         log.exception("Razorpay order creation failed")
         log_activity(db, "payment", "error", f"Razorpay order creation failed: {type(e).__name__}: {e}", design_id=design_id)

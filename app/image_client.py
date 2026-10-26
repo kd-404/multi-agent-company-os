@@ -13,6 +13,7 @@ from openai import OpenAI
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
 from .config import settings
+from .retry import with_retry
 
 _image_client: OpenAI | None = None
 
@@ -42,15 +43,36 @@ def get_image_client() -> OpenAI:
     return _image_client
 
 
+def _is_retryable_openai_error(exc: Exception) -> bool:
+    """
+    The openai SDK raises its own exception hierarchy, not httpx's - a
+    429 (rate limit) or 5xx (transient server error) or a connection/
+    timeout error is worth retrying; a 4xx that isn't a rate limit
+    (bad prompt, auth failure, deployment not found) means retrying would
+    just fail the same way again, so it's left to raise immediately.
+    """
+    import openai
+    if isinstance(exc, (openai.APITimeoutError, openai.APIConnectionError, openai.RateLimitError, openai.InternalServerError)):
+        return True
+    if isinstance(exc, openai.APIStatusError):
+        return exc.status_code in (429, 500, 502, 503, 504)
+    return False
+
+
 def generate_image(prompt: str, size: str = "1024x1024") -> bytes:
-    """Calls the Foundry image deployment and returns raw PNG bytes."""
+    """Calls the Foundry image deployment (with retry/backoff on rate
+    limits/5xx/timeouts - see app/retry.py) and returns raw PNG bytes."""
     client = get_image_client()
-    result = client.images.generate(
-        model=settings.FOUNDRY_IMAGE_DEPLOYMENT,
-        prompt=prompt,
-        size=size,
-        n=1,
-    )
+
+    def _call():
+        return client.images.generate(
+            model=settings.FOUNDRY_IMAGE_DEPLOYMENT,
+            prompt=prompt,
+            size=size,
+            n=1,
+        )
+
+    result = with_retry(_call, label="image_generation", retryable=_is_retryable_openai_error)
     # gpt-image-1/1.5 series always return base64, never a URL.
     import base64
     return base64.b64decode(result.data[0].b64_json)

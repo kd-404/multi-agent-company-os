@@ -1,0 +1,4 @@
+# Dev/test-only dependencies - NOT installed in production (startup.sh and
+# the App Service deploy only use requirements.txt). Install locally or in
+# CI with: pip install -r requirements.txt -r requirements-dev.txt
+pytest==8.3.3

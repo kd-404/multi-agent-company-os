@@ -8,10 +8,10 @@ drifting apart, same pattern as image_client.py / vision_client.py.
 import httpx
 
 from .config import settings
+from .retry import with_retry
 
 
-def research_trend(query: str) -> tuple[str, list[str]]:
-    """Calls Tavily directly; returns (written summary, source URLs)."""
+def _call_tavily(query: str) -> dict:
     resp = httpx.post(
         "https://api.tavily.com/search",
         headers={"Authorization": f"Bearer {settings.TAVILY_API_KEY}"},
@@ -25,7 +25,13 @@ def research_trend(query: str) -> tuple[str, list[str]]:
         timeout=30.0,
     )
     resp.raise_for_status()
-    data = resp.json()
+    return resp.json()
+
+
+def research_trend(query: str) -> tuple[str, list[str]]:
+    """Calls Tavily directly (with retry/backoff on timeouts/5xx/429 - see
+    app/retry.py); returns (written summary, source URLs)."""
+    data = with_retry(lambda: _call_tavily(query), label="tavily_search")
     summary = data.get("answer") or ""
     if not summary:
         # Fall back to stitching result snippets together if Tavily didn't
