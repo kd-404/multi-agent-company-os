@@ -27,11 +27,18 @@ from PIL import Image, ImageChops, ImageFilter
 _TSHIRT_AREAS = {"front": (0.37, 0.27, 0.63, 0.50), "model": (0.34, 0.20, 0.66, 0.45)}
 _LONG_SLEEVE_AREAS = {"front": (0.37, 0.27, 0.63, 0.50), "model": (0.34, 0.20, 0.66, 0.45)}
 _HOODIE_AREAS = {"front": (0.37, 0.32, 0.63, 0.53), "model": (0.34, 0.25, 0.66, 0.48)}
+# Shorts are photographed/worn differently (no chest to put a big print on),
+# so the design lands as a small leg graphic instead - lower and narrower
+# than the chest-print box every top garment uses. "model" box sits around
+# the outer-thigh area of a waist-to-knee worn shot (see mockup_routes.py's
+# bottom-garment framing).
+_SHORTS_AREAS = {"front": (0.56, 0.42, 0.80, 0.62), "model": (0.53, 0.45, 0.75, 0.68)}
 
 PRINT_AREAS: dict[str, dict[str, tuple[float, float, float, float]]] = {
     "tshirt": _TSHIRT_AREAS,
     "long-sleeve": _LONG_SLEEVE_AREAS,
     "hoodie": _HOODIE_AREAS,
+    "shorts": _SHORTS_AREAS,
 }
 
 

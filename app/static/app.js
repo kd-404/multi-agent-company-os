@@ -215,44 +215,69 @@ let mockupTemplatesReady = false; // true once the DEFAULT (tshirt/white) combo 
 async function checkMockupTemplates() {
   const hint = document.getElementById("mockup-setup-hint");
   const btn = document.getElementById("mockup-setup-btn");
+  const forceBtn = document.getElementById("mockup-force-regen-btn");
   const res = await fetch("/api/admin/mockup-templates");
   if (!res.ok) return;
   const status = await res.json();
   mockupTemplatesReady = status.default_ready;
 
+  const missingEntries = Object.entries(status.missing_combos || {});
+  // Explicitly name which garment/color combos are missing - this is the
+  // fix for "I set a design to Hoodie/Black but the photo still shows a
+  // white tee": that combo was never photographed, so every mockup
+  // request for it silently fell back to the default. Naming it here is
+  // what makes that visible instead of a mystery.
+  const missingLabel = (key) => {
+    const [garment, color] = key.split(":");
+    const labels = { tshirt: "T-Shirt", "long-sleeve": "Full-Sleeve", hoodie: "Hoodie", shorts: "Shorts" };
+    const colorLabels = { white: "White", black: "Black", "heather-gray": "Heather Gray" };
+    return `${labels[garment] || garment} · ${colorLabels[color] || color}`;
+  };
+
   if (status.generated_count === status.total_count) {
-    hint.textContent = `All ${status.total_count} garment/color/angle combos are photographed. Each approved design previews on its assigned garment below.`;
-    btn.textContent = "Regenerate all mockup templates";
-    btn.classList.remove("hidden");
+    hint.textContent = `All ${status.total_count} garment/color/angle combos are photographed. Each approved design previews on its own assigned garment below.`;
+    btn.classList.add("hidden");
   } else if (status.generated_count > 0) {
-    hint.textContent = `${status.generated_count} of ${status.total_count} garment/color/angle combos photographed so far — finish the set so every design has its own garment+color to land on.`;
-    btn.textContent = "Finish generating mockup templates";
+    const missingList = missingEntries.map(([key]) => missingLabel(key)).join(", ");
+    hint.textContent = `${status.generated_count} of ${status.total_count} combos photographed. Still missing: ${missingList}. "Photograph missing combos" only calls the image model for these — already-photographed combos aren't redone.`;
+    btn.textContent = "Photograph missing combos";
     btn.classList.remove("hidden");
   } else {
-    hint.textContent = "Photograph the garment matrix once (T-shirt, hoodie and full-sleeve, each in a few colors), so every design previews on a mixed, varied product shot instead of the same white tee.";
+    hint.textContent = "Photograph the garment matrix once (T-shirt, hoodie, full-sleeve and shorts, each in a few colors), so every design previews on a mixed, varied product shot instead of the same white tee.";
+    btn.textContent = "Photograph missing combos";
     btn.classList.remove("hidden");
   }
+  if (forceBtn) forceBtn.classList.toggle("hidden", status.generated_count === 0);
 }
 
-document.getElementById("mockup-setup-btn").onclick = async (e) => {
-  const btn = e.target;
+async function runMockupGeneration(force) {
+  const btn = document.getElementById("mockup-setup-btn");
+  const forceBtn = document.getElementById("mockup-force-regen-btn");
   const hint = document.getElementById("mockup-setup-hint");
-  btn.disabled = true;
-  btn.textContent = "Photographing the garment matrix (several minutes)...";
+  const activeBtn = force ? forceBtn : btn;
+  const otherBtn = force ? btn : forceBtn;
+  activeBtn.disabled = true;
+  if (otherBtn) otherBtn.disabled = true;
+  activeBtn.textContent = force ? "Re-photographing everything (several minutes)..." : "Photographing missing combos...";
   try {
-    const res = await fetch("/api/admin/mockup-templates/generate", { method: "POST" });
+    const form = new FormData();
+    form.append("force", force ? "true" : "false");
+    const res = await fetch("/api/admin/mockup-templates/generate", { method: "POST", body: form });
     const data = await res.json();
-    const failed = Object.entries(data.results || {}).filter(([, v]) => v.status !== "ok");
     await checkMockupTemplates();
-    if (failed.length) {
-      hint.textContent = `${data.succeeded}/${data.total} combos generated. Failed: ${failed.map(([combo, v]) => `${combo} (${v.detail})`).join(", ")}`;
+    if ((data.failed || []).length) {
+      hint.textContent = `${data.succeeded} generated, ${data.skipped} already had one, ${data.failed.length} failed: ${data.failed.join(", ")}.`;
     }
     loadDesigns();
   } finally {
-    btn.disabled = false;
-    if (btn.textContent.startsWith("Photographing")) btn.textContent = "Regenerate all mockup templates";
+    activeBtn.disabled = false;
+    if (otherBtn) otherBtn.disabled = false;
   }
-};
+}
+
+document.getElementById("mockup-setup-btn").onclick = () => runMockupGeneration(false);
+const mockupForceBtn = document.getElementById("mockup-force-regen-btn");
+if (mockupForceBtn) mockupForceBtn.onclick = () => runMockupGeneration(true);
 
 async function loadDesigns() {
   const res = await fetch("/api/admin/design/list");
@@ -319,6 +344,7 @@ function designCardHtml(d) {
         <option value="tshirt" ${d.garment === "tshirt" || !d.garment ? "selected" : ""}>T-Shirt</option>
         <option value="long-sleeve" ${d.garment === "long-sleeve" ? "selected" : ""}>Full-Sleeve</option>
         <option value="hoodie" ${d.garment === "hoodie" ? "selected" : ""}>Hoodie</option>
+        <option value="shorts" ${d.garment === "shorts" ? "selected" : ""}>Shorts</option>
       </select>
       <select id="reassign-color-${d.id}">
         <option value="white" ${d.color === "white" || !d.color ? "selected" : ""}>White</option>
@@ -333,6 +359,7 @@ function designCardHtml(d) {
       <div class="design-body">
         <span class="status-badge status-${d.status}">${d.status}</span>
         <span class="garment-badge">${d.garment_label || "T-Shirt"} · ${d.color_label || "White"}</span>
+        ${d.mockup_matches_garment === false ? `<span class="mockup-mismatch-badge" title="This combo hasn't been photographed yet - the mockup below is showing the default T-Shirt/White stand-in, not the real ${d.garment_label}/${d.color_label} photo.">⚠ showing stand-in photo</span>` : ""}
         <p class="design-summary">${d.trend_summary}</p>
         <p class="design-sources">Sources: ${sourcesHtml || "none"}</p>
         ${actions}

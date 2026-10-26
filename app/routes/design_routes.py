@@ -32,6 +32,7 @@ from ..trend_research import research_trend
 from ..agent_log import log_activity
 from ..garments import pick_garment_and_color, garment_label, color_label, GARMENTS, COLORS
 from ..evaluation import next_run_seq, timed_stage, record_metric, relevance_score, summarize as eval_summarize
+from .mockup_routes import design_mockup_matches_garment
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -266,6 +267,7 @@ def list_designs(db: Session = Depends(get_db), _admin: User = Depends(require_a
             "color": d.color,
             "garment_label": garment_label(d.garment),
             "color_label": color_label(d.color),
+            "mockup_matches_garment": design_mockup_matches_garment(d, db),
             "created_at": d.created_at.isoformat(),
         }
         for d in designs

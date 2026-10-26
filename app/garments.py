@@ -6,10 +6,14 @@ photograph each combo once), the design agent (which assigns a combo to
 every design it generates), and the compositor (which needs the print-area
 geometry per garment).
 
-Deliberately a small, fixed matrix (3 garments x 3 colors = 9 combos) -
+Deliberately a small, fixed matrix (4 garments x 3 colors = 12 combos) -
 each combo needs 2-3 image-model calls to photograph once, so this stays
 small enough that "Generate mockup templates" finishes in a few minutes
-rather than becoming its own slow batch job.
+rather than becoming its own slow batch job. See mockup_routes.py's
+generate_templates() for why that generation step now SKIPS already-
+photographed combos by default instead of re-spending an image-model call
+on every combo every time - adding a garment here only costs new calls
+for the combos that are actually new.
 """
 import random
 
@@ -18,14 +22,22 @@ GARMENTS: dict[str, dict] = {
         "label": "T-Shirt",
         # used in the template photo prompt
         "photo_desc": "a plain crewneck short-sleeve T-shirt",
+        "category": "top",
     },
     "long-sleeve": {
         "label": "Full-Sleeve Shirt",
         "photo_desc": "a plain long-sleeve crew shirt with full-length sleeves reaching the wrists",
+        "category": "top",
     },
     "hoodie": {
         "label": "Hoodie",
         "photo_desc": "a plain pullover hoodie with a kangaroo front pocket and a drawstring hood",
+        "category": "top",
+    },
+    "shorts": {
+        "label": "Shorts",
+        "photo_desc": "a pair of plain mid-thigh athletic/lounge shorts with an elastic drawstring waistband",
+        "category": "bottom",
     },
 }
 
