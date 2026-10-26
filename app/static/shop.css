@@ -87,6 +87,8 @@ textarea { resize: vertical; }
 
 /* ---------- hero ---------- */
 .hero { position: relative; min-height: min(86vh, 760px); display: grid; align-items: center; padding: clamp(32px, 6vw, 80px) clamp(20px, 6vw, 96px); background: linear-gradient(100deg, var(--linen) 0%, var(--sand) 55%, #d4bd9d 100%); background-size: cover; background-position: center right; overflow: hidden; isolation: isolate; }
+/* Permanent editorial hero photo — fixed, not fetched from the brand-image agent. */
+.hero.has-photo { background-image: linear-gradient(100deg, rgba(248,243,234,.06) 0%, rgba(32,20,10,.18) 100%), url("https://images.unsplash.com/photo-1547700094-a0b42d320937?fm=jpg&q=80&w=2400&auto=format&fit=crop"); background-size: cover; background-position: center 30%; }
 .hero.has-photo::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(248, 243, 234, .95) 0%, rgba(248, 243, 234, .78) 32%, rgba(248, 243, 234, 0) 62%); }
 .hero-copy { max-width: 520px; }
 .hero-script { font-family: var(--script); font-size: clamp(34px, 5vw, 56px); color: var(--clay); line-height: 1; }
@@ -150,6 +152,10 @@ textarea { resize: vertical; }
 .farm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .farm-card { position: relative; border-radius: var(--radius); overflow: hidden; aspect-ratio: 2 / 3; background: linear-gradient(160deg, #5a4333, #3b2a1e); background-size: cover; background-position: center; }
 .farm-card:not(.has-photo)::after { content: "Photograph pending — generate it in the staff dashboard"; position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 20px; color: var(--tan); font-size: 13px; }
+/* Permanent "farm edit" photography — fixed editorial set, not the brand-image agent. */
+#farm-1.has-photo { background-image: url("https://images.unsplash.com/photo-1715092761414-d7586eb1c038?fm=jpg&q=80&w=1400&auto=format&fit=crop"); }
+#farm-2.has-photo { background-image: url("https://images.unsplash.com/photo-1723750599301-fee00405eaff?fm=jpg&q=80&w=1400&auto=format&fit=crop"); }
+#farm-3.has-photo { background-image: url("https://images.unsplash.com/photo-1701279680687-07aefe7bd954?fm=jpg&q=80&w=1400&auto=format&fit=crop"); }
 .farm-card figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 60px 20px 20px; background: linear-gradient(0deg, rgba(30, 20, 12, .85), rgba(30, 20, 12, 0)); font-family: var(--serif); font-style: italic; font-size: 22px; line-height: 1.25; color: var(--white); }
 .farm-card:not(.has-photo) figcaption { background: none; }
 @media (max-width: 760px) { .farm-grid { grid-template-columns: 1fr; } .farm-card { aspect-ratio: 4 / 5; } }

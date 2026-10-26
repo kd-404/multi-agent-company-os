@@ -1,10 +1,11 @@
 // Storefront home: hero + brand imagery, linen edit, printed pieces with
 // type filters, and the photo search.
-applyBrandImage($("#hero"), "hero");
+// Hero + "The farm edit" use fixed editorial photography, set once in shop.css
+// (#hero.has-photo, .farm-card.has-photo) — not the live brand-image agent,
+// so they never flicker to a placeholder while a design run is in progress.
 applyBrandImage($("#banner-shirts"), "shirts-banner");
 applyBrandImage($("#banner-tees"), "tees-banner");
 applyBrandImage($("#banner-studio"), "studio-banner");
-["farm-1", "farm-2", "farm-3"].forEach((k) => applyBrandImage(document.getElementById(k), k));
 
 let products = [];
 let typeFilter = "all";
