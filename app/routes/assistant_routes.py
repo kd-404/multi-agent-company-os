@@ -23,6 +23,7 @@ from ..catalog import product_dict, display_title, price_of
 from ..company_info import answer_faq, COMPANY
 from ..garments import GARMENTS, COLORS
 from ..similar import find_similar
+from ..agent_log import log_activity
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -86,6 +87,22 @@ async def assistant_chat(
     db: Session = Depends(get_db),
     user: User | None = Depends(get_optional_user),
 ):
+    result = await _assistant_reply(message, file, db, user)
+    try:  # observability only - never let logging break a shopper's chat
+        photo = file is not None and bool(file.filename)
+        shown = (message or "").strip()[:60] or "(photo)"
+        n = len(result.get("products") or [])
+        log_activity(db, "storefront", "ok",
+                     f"Shopper asked: \"{shown}\" -> {'ticket #%s opened' % result['ticket_id'] if result.get('ticket_id') else '%d product(s) shown' % n if n else 'answered'}",
+                     node="visual_search" if photo else "shop_assistant")
+        if result.get("ticket_id"):
+            log_activity(db, "support", "alert", f"Ticket #{result['ticket_id']} opened via the shop assistant.", node="support_desk")
+    except Exception:
+        log.exception("assistant activity log failed")
+    return result
+
+
+async def _assistant_reply(message, file, db, user):
     text = (message or "").strip()
     low = text.lower()
 

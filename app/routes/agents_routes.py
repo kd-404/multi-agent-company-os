@@ -34,7 +34,7 @@ def agents_status(db: Session = Depends(get_db), _admin: User = Depends(require_
     for agent in AGENTS:
         latest = (
             db.query(AgentActivity)
-            .filter(AgentActivity.agent == agent)
+            .filter(AgentActivity.agent == agent, AgentActivity.status != "start")
             .order_by(AgentActivity.created_at.desc())
             .first()
         )
@@ -44,7 +44,7 @@ def agents_status(db: Session = Depends(get_db), _admin: User = Depends(require_
 
 @router.get("/api/admin/agents/feed")
 def agents_feed(db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
-    rows = db.query(AgentActivity).order_by(AgentActivity.created_at.desc()).limit(30).all()
+    rows = db.query(AgentActivity).filter(AgentActivity.status != "start").order_by(AgentActivity.created_at.desc()).limit(30).all()
     return [activity_to_dict(r) for r in rows]
 
 

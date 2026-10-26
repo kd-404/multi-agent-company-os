@@ -65,6 +65,8 @@ async function enterDashboard() {
 
   if (me.role === "admin") {
     show(["admin-panel", "design-panel", "interest-panel", "agents-panel", "marketing-panel", "warehouse-panel", "eval-panel", "funnel-panel", "storefront-panel", "support-panel", "vision-panel", "chat-panel"]);
+    document.getElementById("floor-link")?.classList.remove("hidden");
+    document.getElementById("floor-top")?.classList.remove("hidden");
     loadUsers();
     await checkMockupTemplates();
     loadDesigns();
@@ -88,30 +90,31 @@ async function enterDashboard() {
   setupSidebarScrollspy();
 }
 
-// --- Sidebar: scrollspy (highlight the section currently in view) ---
+// --- Sidebar: one panel at a time (Overview = Agent Status by default) ---
 function setupSidebarScrollspy() {
   const links = Array.from(document.querySelectorAll(".sidebar-link[data-target]"));
   if (!links.length) return;
+  const visibleLinks = links.filter((a) => !a.classList.contains("hidden"));
+  const statRow = document.getElementById("stat-row");
 
-  const setActive = (id) => {
+  // group labels only appear when their first link is visible
+  document.querySelectorAll(".sidebar-group").forEach((g) => {
+    const l = document.querySelector(`.sidebar-link[data-target="${g.dataset.for}"]`);
+    g.classList.toggle("hidden", !l || l.classList.contains("hidden"));
+  });
+
+  const open = (id) => {
     links.forEach((a) => a.classList.toggle("active", a.dataset.target === id));
+    document.querySelectorAll(".grid > .panel").forEach((p) => p.classList.toggle("current", p.id === id));
+    if (statRow) statRow.classList.toggle("on-overview", id === "agents-panel");
+    try { history.replaceState(null, "", "#" + id); } catch (e) {}
+    window.scrollTo({ top: 0 });
   };
+  links.forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); open(a.dataset.target); }));
 
-  links.forEach((a) => {
-    a.addEventListener("click", () => setActive(a.dataset.target));
-  });
-
-  const observer = new IntersectionObserver(
-    (entries) => {
-      const visible = entries.filter((e) => e.isIntersecting);
-      if (visible.length) setActive(visible[0].target.id);
-    },
-    { rootMargin: "-20% 0px -70% 0px" }
-  );
-  links.forEach((a) => {
-    const section = document.getElementById(a.dataset.target);
-    if (section) observer.observe(section);
-  });
+  const fromHash = (location.hash || "").slice(1);
+  const first = visibleLinks.find((a) => a.dataset.target === fromHash) || visibleLinks[0];
+  if (first) open(first.dataset.target);
 }
 
 // --- Stat row: dashboard-home summary cards, built from data already loaded ---

@@ -383,3 +383,21 @@ button:hover { opacity: 0.9; }
 .funnel-step span { font-size: 12px; color: var(--muted); }
 .funnel-step em { display: block; font-style: normal; font-size: 12px; color: #b5701f; margin-top: 2px; }
 .funnel-stage-address, .funnel-stage-payment { background: #e3eefc; color: #1d4e89; }
+
+/* --- Dashboard: one panel at a time, grouped sidebar --- */
+.grid { grid-template-columns: minmax(0, 1fr); }
+.grid > .panel { display: none; grid-column: 1 / -1; }
+.grid > .panel.current { display: block; animation: panelIn .18s ease-out; }
+.grid > .panel.hidden { display: none; }
+@keyframes panelIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+#stat-row { display: none; }
+#stat-row.on-overview { display: grid; }
+#stat-row.hidden { display: none; }
+.sidebar-group { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; opacity: .5; padding: 14px 12px 4px; }
+.sidebar-group.hidden { display: none; }
+.sidebar-floor { background: linear-gradient(135deg, rgba(233,161,95,.25), rgba(233,161,95,.08)); border: 1px solid rgba(233,161,95,.35); margin-bottom: 4px; }
+.sidebar-floor.hidden { display: none; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: #6fd39a; margin-left: auto; box-shadow: 0 0 0 0 rgba(111,211,154,.6); animation: livePulse 1.8s infinite; }
+@keyframes livePulse { 70% { box-shadow: 0 0 0 7px rgba(111,211,154,0); } 100% { box-shadow: 0 0 0 0 rgba(111,211,154,0); } }
+.floor-top { background: #3a2a1d; color: #f6dcc0 !important; padding: 7px 12px; border-radius: 8px; font-size: 13px; text-decoration: none; margin-right: 8px; }
+.floor-top.hidden { display: none; }

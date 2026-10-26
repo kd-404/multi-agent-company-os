@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db, SupportTicket, User
 from ..auth import get_current_user, require_permission
+from ..agent_log import log_activity
 
 router = APIRouter()
 
@@ -21,6 +22,7 @@ def create_ticket(
                       design_id=design_id, status="open")
     db.add(t)
     db.commit()
+    log_activity(db, "support", "alert", f"Ticket #{t.id} opened: {t.subject[:70]}", node="support_desk")
     return {"status": "ok", "ticket_id": t.id}
 
 
@@ -51,6 +53,7 @@ def resolve_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
     t.status = "resolved"
     db.commit()
+    log_activity(db, "support", "ok", f"Ticket #{t.id} resolved by {_staff.email}.", node="support_desk")
     return {"status": "ok"}
 
 

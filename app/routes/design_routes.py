@@ -30,7 +30,7 @@ from ..auth import require_admin
 from ..image_client import generate_image
 from ..visual_search import extract_signals, tags_to_text, color_to_text
 from ..trend_research import research_trend
-from ..agent_log import log_activity
+from ..agent_log import log_activity, step, new_run_id
 from ..garments import pick_garment_and_color, garment_label, color_label, GARMENTS, COLORS
 from ..evaluation import next_run_seq, timed_stage, record_metric, relevance_score, summarize as eval_summarize
 from .mockup_routes import design_mockup_matches_garment
@@ -80,21 +80,29 @@ def _generate_one_design(query: str, db: Session, forced_garment: str | None = N
     across runs rather than just the latest one.
     """
     run_seq = next_run_seq(db)
+    run_id = new_run_id("design")
+    log_activity(db, "design", "ok", f"New design run started: \"{query[:90]}\"", run_id=run_id)
 
     try:
-        with timed_stage(db, run_seq, "trend_research"):
-            summary, sources = research_trend(query)
+        with step(db, "design", "trend_scout", f"Searching the live web for: {query[:80]}", run_id=run_id) as st:
+            with timed_stage(db, run_seq, "trend_research"):
+                summary, sources = research_trend(query)
+            st.done = f"Found a trend brief from {len(sources)} source(s)."
     except Exception as e:
         log.exception("Tavily trend research failed")
         log_activity(db, "design", "error", f"Trend research failed: {type(e).__name__}: {e}")
         record_metric(db, run_seq, "overall", "success", 0)
         return {"status": "error", "stage": "trend_research", "detail": f"{type(e).__name__}: {e}", "query": query}
 
-    image_prompt = f"{summary}{IMAGE_STYLE_SUFFIX}"
+    with step(db, "design", "prompt_writer", "Turning the brief into an image prompt", run_id=run_id) as st:
+        image_prompt = f"{summary}{IMAGE_STYLE_SUFFIX}"
+        st.done = f"Prompt ready ({len(image_prompt)} characters, house style appended)."
 
     try:
-        with timed_stage(db, run_seq, "image_generation"):
-            image_bytes = generate_image(image_prompt, size="1024x1024")
+        with step(db, "design", "image_gen", "Drawing the artwork with the image model", run_id=run_id) as st:
+            with timed_stage(db, run_seq, "image_generation"):
+                image_bytes = generate_image(image_prompt, size="1024x1024")
+            st.done = "Artwork generated (1024x1024)."
     except Exception as e:
         log.exception("Image generation failed")
         log_activity(db, "design", "error", f"Image generation failed: {type(e).__name__}: {e}")
@@ -107,9 +115,11 @@ def _generate_one_design(query: str, db: Session, forced_garment: str | None = N
     # with no tags yet gets backfilled lazily on first search.
     vision_tags_text, dominant_color_text, tags = None, None, []
     try:
-        with timed_stage(db, run_seq, "vision_tagging"):
-            tags, color = extract_signals(image_bytes)
-            vision_tags_text, dominant_color_text = tags_to_text(tags), color_to_text(color)
+        with step(db, "design", "vision_tagger", "Reading the artwork with Azure Vision", run_id=run_id) as st:
+            with timed_stage(db, run_seq, "vision_tagging"):
+                tags, color = extract_signals(image_bytes)
+                vision_tags_text, dominant_color_text = tags_to_text(tags), color_to_text(color)
+            st.done = f"Tags: {', '.join(tags[:5]) or 'none'}; colour rgb{tuple(color)}."
         log.info("Vision tagging OK for new design: tags=%s color=%s", tags, color)
     except Exception:
         log.exception("Vision tagging FAILED for new design (non-fatal, will backfill on search)")
@@ -118,7 +128,11 @@ def _generate_one_design(query: str, db: Session, forced_garment: str | None = N
     # finished image's own Vision tags actually relate to the trend brief
     # that was supposed to produce it, or did the pipeline drift off-brief
     # while still technically "succeeding"?
-    record_metric(db, run_seq, "overall", "relevance_score", relevance_score(summary, tags))
+    rel = relevance_score(summary, tags)
+    record_metric(db, run_seq, "overall", "relevance_score", rel)
+    log_activity(db, "design", "ok" if rel >= 40 else "alert",
+                 f"Relevance {rel}/100 - artwork tags {'match' if rel >= 40 else 'drift from'} the trend brief.",
+                 node="relevance_critic", run_id=run_id)
 
     # Mixed product matrix (see app/garments.py): every design lands on a
     # different garment type, and a color picked to contrast with the
@@ -129,6 +143,9 @@ def _generate_one_design(query: str, db: Session, forced_garment: str | None = N
     auto_garment, auto_color = pick_garment_and_color(dominant_color_text)
     garment = forced_garment if forced_garment in GARMENTS else auto_garment
     color = forced_color if forced_color in COLORS else auto_color
+
+    log_activity(db, "design", "ok", f"Chose {garment_label(garment)} in {color_label(color)} to contrast with the art.",
+                 node="garment_matcher", run_id=run_id)
 
     design = Design(
         trend_query=query,
@@ -151,8 +168,10 @@ def _generate_one_design(query: str, db: Session, forced_garment: str | None = N
     log_activity(
         db, "design", "ok",
         f"Generated design #{design.id} ({garment_label(garment)}, {color_label(color)}) from live trend research.",
-        design_id=design.id,
+        design_id=design.id, run_id=run_id,
     )
+    log_activity(db, "design", "wait", f"Design #{design.id} is waiting for a human to approve it.",
+                 design_id=design.id, node="human_approval", run_id=run_id)
 
     return {
         "status": "ok",
@@ -293,6 +312,9 @@ def _set_status(design_id: int, status: str, db: Session, _admin: User):
         raise HTTPException(status_code=404, detail="Design not found")
     design.status = status
     db.commit()
+    log_activity(db, "design", "ok" if status == "approved" else "alert",
+                 f"{_admin.email} {status} design #{design.id}" + (" - photography and captions can begin." if status == "approved" else "."),
+                 design_id=design.id, node="human_approval")
     return {"status": "ok", "id": design.id, "new_status": status}
 
 

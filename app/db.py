@@ -244,6 +244,12 @@ class AgentActivity(Base):
     status = Column(String(20), nullable=False)
     message = Column(Text, nullable=False)
     design_id = Column(Integer, nullable=True, index=True)
+    # Agent Floor (app/agent_registry.py): which node of the pipeline graph did
+    # this, which run it belongs to, and how long it took. status "start" marks
+    # a node as working until its matching ok/error row arrives.
+    node = Column(String(40), nullable=True, index=True)
+    run_id = Column(String(24), nullable=True, index=True)
+    duration_ms = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -356,6 +362,13 @@ def _run_lightweight_migrations():
             "kind": "VARCHAR(20) DEFAULT 'print'",
             "title": "VARCHAR(160)",
             "price_inr": "INTEGER",
+        })
+
+    if "agent_activities" in table_names:
+        _add_missing_columns("agent_activities", {
+            "node": "VARCHAR(40)",
+            "run_id": "VARCHAR(24)",
+            "duration_ms": "INTEGER",
         })
 
     if "checkout_events" in table_names:

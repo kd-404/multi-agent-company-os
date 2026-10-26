@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db, Design, ProductPhoto, BrandAsset, User
 from ..auth import require_admin
 from ..image_client import generate_image
-from ..agent_log import log_activity
+from ..agent_log import log_activity, step
 from ..visual_search import extract_signals, tags_to_text, color_to_text
 
 log = logging.getLogger(__name__)
@@ -87,8 +87,10 @@ def create_linen_item(index: int, db: Session = Depends(get_db), _admin: User = 
 
     prompts = _linen_prompts(index, item)
     try:
-        front = generate_image(prompts["front"], size="1024x1024")
-        model = generate_image(prompts["model"], size="1024x1024")
+        with step(db, "design", "linen_atelier", f"Photographing '{item['title']}'") as st:
+            front = generate_image(prompts["front"], size="1024x1024")
+            model = generate_image(prompts["model"], size="1024x1024")
+            st.done = f"'{item['title']}' photographed (flat lay + on model)."
     except Exception as e:
         log.exception("Linen item generation failed")
         log_activity(db, "design", "error", f"Linen item '{item['title']}' failed: {type(e).__name__}: {e}")
@@ -169,7 +171,9 @@ def generate_brand_asset(
         return {"status": "exists", "key": key}
     size, prompt = BRAND_ASSETS[key]
     try:
-        data = generate_image(prompt, size=size)
+        with step(db, "design", "brand_stylist", f"Generating brand image '{key}'") as st:
+            data = generate_image(prompt, size=size)
+            st.done = f"Brand image '{key}' generated."
     except Exception as e:
         log.exception("Brand asset generation failed: %s", key)
         raise HTTPException(status_code=502, detail=f"Image generation failed: {type(e).__name__}: {e}")

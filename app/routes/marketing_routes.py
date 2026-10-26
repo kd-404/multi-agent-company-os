@@ -28,7 +28,7 @@ from ..config import settings
 from ..db import get_db, Design, User
 from ..auth import require_admin
 from ..trend_research import research_trend
-from ..agent_log import log_activity
+from ..agent_log import log_activity, step
 from ..retry import with_retry
 from .design_routes import _generate_one_design
 
@@ -99,7 +99,9 @@ def draft_caption(
 @router.post("/api/admin/marketing/scan-trends")
 def scan_trends(db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
     try:
-        summary, sources = research_trend(TREND_RADAR_QUERY)
+        with step(db, "marketing", "trend_radar", "Scanning live trends and comparing with the catalogue") as st:
+            summary, sources = research_trend(TREND_RADAR_QUERY)
+            st.done = f"Fetched current trends from {len(sources)} source(s)."
     except Exception as e:
         log.exception("Marketing trend scan failed")
         log_activity(db, "marketing", "error", f"Trend scan failed: {type(e).__name__}: {e}")

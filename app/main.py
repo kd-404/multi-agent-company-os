@@ -27,6 +27,7 @@ from .routes import (
     support_routes,
     studio_routes,
     storefront_admin_routes,
+    floor_routes,
 )
 
 
@@ -80,6 +81,7 @@ app.include_router(assistant_routes.router)
 app.include_router(support_routes.router)
 app.include_router(studio_routes.router)
 app.include_router(storefront_admin_routes.router)
+app.include_router(floor_routes.router)
 
 
 @app.on_event("startup")
@@ -114,6 +116,12 @@ def studio(request: Request):
 def checkout_page(kind: str, item_id: int, request: Request):
     """Full-page demo checkout (address -> summary -> payment). kind = design | custom."""
     return templates.TemplateResponse("checkout.html", {"request": request, "kind": kind, "item_id": item_id})
+
+
+@app.get("/floor", response_class=HTMLResponse)
+def floor(request: Request):
+    """Agent Floor: live workflow graph of every agent (admin only - the page checks /api/me)."""
+    return templates.TemplateResponse("floor.html", {"request": request})
 
 
 @app.get("/health")

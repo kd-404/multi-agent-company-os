@@ -27,6 +27,7 @@ from azure.identity import DefaultAzureCredential
 from ..config import settings
 from ..db import get_db, ChatMessage
 from ..auth import require_permission
+from ..agent_log import step
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -80,7 +81,9 @@ def chat(
     user=Depends(require_permission("ceo_chat")),
 ):
     try:
-        reply_text = _ask_agent(user.id, message)
+        with step(db, "ceo", "ceo", f"Answering: {message[:70]}") as st:
+            reply_text = _ask_agent(user.id, message)
+            st.done = "Answered from the internal docs."
     except Exception as e:  # show the real reason in the UI instead of a blank 500
         log.exception("CEO agent call failed")
         _conversations.pop(user.id, None)  # start fresh next time in case the conversation broke

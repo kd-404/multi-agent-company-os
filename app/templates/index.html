@@ -51,10 +51,16 @@
             <span class="sidebar-brand-text">Loomwell</span>
           </div>
           <nav class="sidebar-nav">
+            <a href="/floor" id="floor-link" class="sidebar-link sidebar-floor hidden">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>
+              Agent Floor <span class="live-dot"></span>
+            </a>
+            <div class="sidebar-group admin-only-label" data-for="agents-panel">Overview</div>
             <a href="#agents-panel" class="sidebar-link active hidden" data-target="agents-panel">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
               Agent Status
             </a>
+            <div class="sidebar-group admin-only-label" data-for="design-panel">Create</div>
             <a href="#design-panel" class="sidebar-link hidden" data-target="design-panel">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.5-6.3 4.5 2.3-7.2-6-4.6h7.6z"/></svg>
               Design Studio
@@ -63,10 +69,12 @@
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg>
               Evaluation
             </a>
+            <div class="sidebar-group admin-only-label" data-for="marketing-panel">Grow</div>
             <a href="#marketing-panel" class="sidebar-link hidden" data-target="marketing-panel">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-7-7 18-2.5-7.5L3 11z"/></svg>
               Marketing
             </a>
+            <div class="sidebar-group admin-only-label" data-for="funnel-panel">Sell</div>
             <a href="#funnel-panel" class="sidebar-link hidden" data-target="funnel-panel">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h18l-7 9v6l-4 2v-8z"/></svg>
               Checkout Funnel
@@ -83,6 +91,7 @@
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1-5h16l1 5"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/></svg>
               Storefront Builder
             </a>
+            <div class="sidebar-group admin-only-label" data-for="support-panel">Care</div>
             <a href="#support-panel" class="sidebar-link hidden" data-target="support-panel">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12v4a2 2 0 0 0 2 2h1v-6H5a2 2 0 0 0-2 2z"/><path d="M21 12v4a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2z"/></svg>
               Support
@@ -91,6 +100,7 @@
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
               Vision Lens
             </a>
+            <div class="sidebar-group admin-only-label" data-for="chat-panel">Manage</div>
             <a href="#chat-panel" class="sidebar-link hidden" data-target="chat-panel">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               CEO Assistant
@@ -111,6 +121,7 @@
             <div class="topbar-right">
               <span id="role-badge" class="badge"></span>
               <span id="user-email" class="topbar-email"></span>
+              <a href="/floor" id="floor-top" class="floor-top hidden">Open Agent Floor &rarr;</a>
               <button id="logout-btn">Log out</button>
             </div>
           </header>
@@ -120,7 +131,7 @@
           <main class="grid">
             <!-- Admin-only: live multi-agent status + full pipeline demo -->
             <div class="panel hidden" id="agents-panel">
-              <h2>Agent Status</h2>
+              <h2>Agent Status <a href="/floor" class="floor-top" style="float:right;font-size:12px">Open the live Agent Floor &rarr;</a></h2>
               <p class="hint">Design, Marketing, Warehouse, Payment and the CEO agent, live &mdash; each card is that agent's own most recent activity, not a heartbeat. "Run full pipeline" fires a real pass through all five, in order, right now.</p>
               <div id="agent-cards" class="agent-cards"></div>
               <button type="button" id="run-demo-btn">Run full pipeline demo</button>

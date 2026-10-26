@@ -95,6 +95,12 @@ def _log_event(db: Session, item: dict, user: User, stage: str, amount: int, **e
                       item_kind=item["kind"], **extra)
     db.add(e)
     db.commit()
+    try:
+        label = {"opened": "opened checkout", "address": "entered an address", "payment": "reached payment", "paid": "placed an order"}[stage]
+        log_activity(db, "payment", "ok", f"{user.email.split('@')[0]} {label} (₹{amount}, {item['kind']} #{item['id']}).",
+                     design_id=item["id"] if item["kind"] == "design" else None, node="checkout")
+    except Exception:
+        log.exception("funnel activity log failed")
     return e
 
 

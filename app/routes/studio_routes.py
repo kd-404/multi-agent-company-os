@@ -115,6 +115,7 @@ async def studio_upload(
     db.add(cd)
     db.commit()
     db.refresh(cd)
+    log_activity(db, "storefront", "ok", f"A shopper uploaded artwork for a custom {garment} (custom #{cd.id}).", node="studio_agent")
     return _row(cd)
 
 
@@ -150,7 +151,7 @@ def studio_generate(
     db.add(cd)
     db.commit()
     db.refresh(cd)
-    log_activity(db, "design", "ok", f"Print-your-own: AI artwork generated for a customer (custom #{cd.id}).")
+    log_activity(db, "storefront", "ok", f"Print-your-own: AI artwork generated for a shopper (custom #{cd.id}).", node="studio_agent")
     return _row(cd)
 
 

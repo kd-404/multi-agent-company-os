@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 from .db import Design, ProductPhoto
 from .garments import GARMENTS, COLORS, luminance
 from .image_client import edit_image, generate_image
-from .agent_log import log_activity
+from .agent_log import log_activity, step, new_run_id
 
 log = logging.getLogger(__name__)
 
@@ -141,7 +141,7 @@ def _store(db: Session, design_id: int, slot: str, data: bytes, verified: int | 
     db.commit()
 
 
-def generate_product_photo(db: Session, design: Design, slot: str) -> dict:
+def generate_product_photo(db: Session, design: Design, slot: str, run_id: str | None = None) -> dict:
     """One slot, with the critic loop. Raises only if the image model itself
     fails twice; callers treat that as 'keep using the Pillow fallback'."""
     garment = design.garment or "tshirt"
@@ -149,21 +149,35 @@ def generate_product_photo(db: Session, design: Design, slot: str) -> dict:
     if garment not in GARMENTS or color not in COLORS:
         raise ValueError(f"Unknown garment/color {garment}/{color}")
 
-    prompt = build_photo_prompt(design, garment, color, slot)
-    img = edit_image(prompt, design.image_data)
-    verified, caption, problem = _verify(img, garment, color)
+    with step(db, "design", "photo_director", f"Writing the {slot} photo brief for design #{design.id}", run_id=run_id, design_id=design.id) as st:
+        prompt = build_photo_prompt(design, garment, color, slot)
+        st.done = f"Brief ready: {GARMENTS[garment]['label']} / {COLORS[color]['label']}, print {GARMENTS[garment]['placement'][:48]}..."
+    with step(db, "design", "photographer", f"Photographing design #{design.id} ({slot})", run_id=run_id, design_id=design.id) as st:
+        img = edit_image(prompt, design.image_data)
+        st.done = f"{slot} photo shot."
+    with step(db, "design", "photo_critic", f"Checking the {slot} photo with Vision", run_id=run_id, design_id=design.id) as st:
+        verified, caption, problem = _verify(img, garment, color)
+        st.done = ("Verified: right garment and colour." if verified == 1
+                   else "Could not verify (Vision unavailable)." if verified is None
+                   else f"Mismatch - {problem}")
 
     retried = False
     if verified == 0:
         retried = True
         log.info("Photo for design %s/%s failed critic (%s) - regenerating once", design.id, slot, problem)
-        prompt2 = build_photo_prompt(design, garment, color, slot, correction=problem)
-        img2 = edit_image(prompt2, design.image_data)
-        v2, cap2, _ = _verify(img2, garment, color)
+        with step(db, "design", "photographer", f"Re-shooting {slot} with the critic's correction", run_id=run_id, design_id=design.id) as st:
+            prompt2 = build_photo_prompt(design, garment, color, slot, correction=problem)
+            img2 = edit_image(prompt2, design.image_data)
+            st.done = "Corrected photo shot."
+        with step(db, "design", "photo_critic", f"Re-checking the {slot} photo", run_id=run_id, design_id=design.id) as st:
+            v2, cap2, _ = _verify(img2, garment, color)
+            st.done = "Now verified." if v2 == 1 else "Still unverified - keeping the better attempt."
         if v2 != 0:  # better or unverifiable - keep the retry
             img, verified, caption = img2, v2, cap2
 
     _store(db, design.id, slot, img, verified, caption)
+    log_activity(db, "design", "ok", f"Design #{design.id} {slot} photo is live on the storefront.",
+                 design_id=design.id, node="storefront", run_id=run_id)
     return {"slot": slot, "verified": verified, "caption": caption, "retried": retried}
 
 
@@ -172,9 +186,10 @@ def generate_photos_for_design(db: Session, design_id: int, slots=PHOTO_SLOTS) -
     if not design:
         return []
     results = []
+    run_id = new_run_id("photo")
     for slot in slots:
         try:
-            res = generate_product_photo(db, design, slot)
+            res = generate_product_photo(db, design, slot, run_id=run_id)
             results.append(res)
             log_activity(
                 db, "design", "ok" if res["verified"] != 0 else "alert",

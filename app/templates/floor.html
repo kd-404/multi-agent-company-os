@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agent Floor — Loomwell</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" />
+<link rel="stylesheet" href="/static/floor.css?v={{ asset_version }}" />
+</head>
+<body>
+<div id="gate" class="gate hidden"><div><h1>Agent Floor</h1><p>This view is for admins.</p><a class="btn" href="/">Go to sign in</a></div></div>
+
+<header class="bar">
+  <a class="brand" href="/" title="Back to dashboard">
+    <span class="logo">L</span>
+    <span><strong>Agent Floor</strong><em>Every agent, live — what it does, what it touches</em></span>
+  </a>
+  <nav class="tabs" id="tabs" role="tablist">
+    <button role="tab" class="on" data-tab="workflow">Workflow</button>
+    <button role="tab" data-tab="globe">Globe</button>
+    <button role="tab" data-tab="agents">All agents</button>
+  </nav>
+  <div class="chips" id="chips"></div>
+  <div class="actions">
+    <button class="btn ghost" id="sim-btn" title="Play a scripted walkthrough (no API calls)">▶ Simulate a drop</button>
+    <button class="btn solid" id="real-btn" title="Runs one real design: Tavily + image model + Vision">⚡ Run a real design</button>
+    <a class="btn ghost" href="/">Dashboard</a>
+  </div>
+</header>
+
+<div class="legend" id="legend">
+  <span class="lg working">Working</span><span class="lg finished">Just finished</span><span class="lg ok">Healthy</span>
+  <span class="lg waiting">Needs you</span><span class="lg error">Error</span><span class="lg planned">Planned</span>
+  <span class="note" id="live-note">connecting…</span>
+</div>
+
+<main class="main">
+  <section class="view on" id="view-workflow">
+    <div class="canvas" id="canvas">
+      <div class="stage" id="stage"></div>
+      <div class="zoom">
+        <button id="z-in" aria-label="Zoom in">+</button><button id="z-out" aria-label="Zoom out">−</button><button id="z-width">Fit width</button><button id="z-fit">Fit all</button>
+        <button id="z-lane" data-lane="design">Design Studio</button>
+      </div>
+      <div class="hint">Drag to pan · scroll to zoom · click an agent</div>
+    </div>
+  </section>
+
+  <section class="view" id="view-globe">
+    <div class="globe-wrap">
+      <canvas id="globe"></canvas>
+      <div class="globe-ui">
+        <button class="btn solid" id="tour-btn">▶ Play the pipeline tour</button>
+        <label class="auto"><input type="checkbox" id="spin" checked /> Auto-rotate</label>
+      </div>
+      <div class="globe-note">Pin positions are illustrative (which Azure region hosts what is a deployment setting). The sequence and the data on every hop are real.</div>
+    </div>
+    <aside class="hops" id="hops"></aside>
+  </section>
+
+  <section class="view" id="view-agents"><div class="cards" id="cards"></div></section>
+
+  <aside class="drawer" id="drawer">
+    <div class="dtabs">
+      <button class="on" data-d="run">Latest run</button>
+      <button data-d="agent">Agent</button>
+      <button data-d="feed">Live activity</button>
+    </div>
+    <div class="dbody" id="dbody"></div>
+  </aside>
+</main>
+
+<script src="/static/floor.js?v={{ asset_version }}"></script>
+</body>
+</html>
