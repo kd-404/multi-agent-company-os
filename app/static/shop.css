@@ -601,7 +601,17 @@ a { color: inherit; }
 .detail-caption p { margin: 0; }
 #detail-caption-text { font-size: 14.5px; color: var(--paper); margin-bottom: 8px !important; }
 .detail-hashtags { font-size: 13px; color: var(--lavender); }
-.detail-note { color: var(--muted); font-size: 13px; margin: 18px 0 0; }
+.detail-note { color: var(--muted); font-size: 13px; margin: 18px 0 0; max-width: 42ch; }
+.buy-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.cta-ghost {
+  color: var(--lavender);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+.cta-ghost:hover { color: var(--neon); }
+#buy-now-btn { border: none; font-family: var(--font-body); cursor: pointer; }
+#buy-now-btn:disabled { opacity: 0.6; cursor: default; }
 
 .modal-detail-link {
   display: inline-block;

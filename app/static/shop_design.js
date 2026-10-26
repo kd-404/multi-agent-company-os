@@ -108,6 +108,79 @@ async function loadRelated() {
 
 loadDesign();
 
+// --- Buy now (Razorpay when connected, honest simulated order until then) ---
+document.getElementById("buy-now-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("buy-now-btn");
+  const statusEl = document.getElementById("buy-status");
+
+  // Reuses the exact same /api/me the account modal already checks -
+  // checkout requires an account, same as any real storefront.
+  const me = await fetch("/api/me");
+  if (!me.ok) {
+    statusEl.textContent = "Sign in first, then come back to buy.";
+    openAccountModal();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Starting checkout…";
+  statusEl.textContent = "";
+
+  try {
+    const res = await fetch(`/api/public/payment/create-order/${DESIGN_ID}`, { method: "POST" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      statusEl.textContent = err.detail || "Couldn't start checkout - try again.";
+      return;
+    }
+    const order = await res.json();
+
+    if (order.mode === "simulated") {
+      statusEl.textContent = `Order simulated: ₹${order.amount_inr} for design #${DESIGN_ID}. Razorpay isn't connected yet, so no real charge happened - this is logged on the Agent Status feed as a test order.`;
+      return;
+    }
+
+    // Live mode: hand off to Razorpay's own hosted Checkout widget. This
+    // page never touches card/UPI details itself - Razorpay's widget
+    // collects them, and only a payment id + signature come back to us.
+    if (typeof Razorpay === "undefined") {
+      statusEl.textContent = "Checkout widget failed to load - check your connection and try again.";
+      return;
+    }
+    const rzp = new Razorpay({
+      key: order.key_id,
+      amount: order.amount,
+      currency: order.currency,
+      name: "Loomwell",
+      description: order.design_summary.slice(0, 80),
+      order_id: order.razorpay_order_id,
+      theme: { color: "#c6ff5e" },
+      handler: async (response) => {
+        statusEl.textContent = "Verifying payment…";
+        const verifyRes = await fetch("/api/public/payment/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+          }),
+        });
+        statusEl.textContent = verifyRes.ok
+          ? "Payment confirmed - thank you! (Shipping/fulfillment isn't automated yet - Loomwell will follow up by email.)"
+          : "Payment went through at Razorpay but couldn't be verified here - contact support with your payment id.";
+      },
+      modal: {
+        ondismiss: () => { statusEl.textContent = "Checkout closed - nothing was charged."; },
+      },
+    });
+    rzp.open();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Buy now — ₹899";
+  }
+});
+
 // --- Top-bar search: this page has no grid to filter, so send the
 // shopper to the collection page with their query in mind. ---
 document.getElementById("topbar-search-form").addEventListener("submit", (e) => {

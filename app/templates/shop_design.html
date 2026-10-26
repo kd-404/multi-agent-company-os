@@ -63,8 +63,11 @@
           <p class="detail-hashtags" id="detail-hashtags"></p>
         </div>
 
-        <a href="/shop#search" class="cta">Find something like it</a>
-        <p class="detail-note">Checkout is coming soon &mdash; the collection is browsable, not yet purchasable.</p>
+        <div class="buy-row">
+          <button type="button" class="cta" id="buy-now-btn">Buy now &mdash; &#8377;899</button>
+          <a href="/shop#search" class="cta-ghost">Find something like it</a>
+        </div>
+        <p class="detail-note" id="buy-status"></p>
       </div>
     </section>
 
@@ -136,6 +139,7 @@
     </div>
   </div>
 
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>window.LOOMWELL_DESIGN_ID = {{ design_id }};</script>
   <script src="/static/shop_design.js"></script>
 </body>

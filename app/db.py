@@ -112,6 +112,29 @@ class MockupTemplate(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class Order(Base):
+    """
+    One row per checkout attempt for a single design (see
+    app/routes/payment_routes.py). Created in "created" status the moment
+    a Razorpay order is opened, flipped to "paid" only after this server
+    independently verifies Razorpay's signature on the callback - never
+    trusts the browser's word alone that a payment succeeded. Doesn't
+    exist at all in simulated mode (no Razorpay keys configured yet) -
+    that path still goes through the older AgentActivity-only
+    simulate_order(), unchanged.
+    """
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    design_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    amount_inr = Column(Integer, nullable=False)
+    status = Column(String(20), nullable=False, default="created")  # created | paid | failed
+    razorpay_order_id = Column(String(64), nullable=True, index=True)
+    razorpay_payment_id = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class SearchLog(Base):
     """
     One row per visual-search request, used only to power the admin

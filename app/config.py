@@ -32,6 +32,22 @@ class Settings(BaseSettings):
     TAVILY_API_KEY: str = ""             # from tavily.com dashboard, free tier
     FOUNDRY_IMAGE_DEPLOYMENT: str = "gpt-image-1.5"  # deployment name from Foundry > Models
 
+    # --- Razorpay (checkout) ---
+    # From the Razorpay dashboard (Settings -> API Keys), once KYC is
+    # approved. Leaving these blank keeps checkout in simulated mode - see
+    # app/routes/payment_routes.py's razorpay_configured(). RAZORPAY_KEY_ID
+    # is not secret (it's sent to the browser to open the checkout widget);
+    # RAZORPAY_KEY_SECRET must never leave the server.
+    RAZORPAY_KEY_ID: str = ""
+    RAZORPAY_KEY_SECRET: str = ""
+
+    # --- Instagram Graph API (marketing auto-post) ---
+    # From a Meta developer app connected to an Instagram Business/Creator
+    # account linked to a Facebook Page. Leaving these blank keeps
+    # "Schedule post" in simulated mode - see app/routes/marketing_routes.py.
+    INSTAGRAM_ACCESS_TOKEN: str = ""
+    INSTAGRAM_BUSINESS_ACCOUNT_ID: str = ""
+
     class Config:
         env_file = ".env"
 
